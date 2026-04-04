@@ -12,4 +12,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmailHash(String emailHash);
     Optional<User> findByAnonymousUsername(String anonymousUsername);
     boolean existsByEmailHash(String emailHash);
+
+    boolean existsByAnonymousUsername(String username);
 }

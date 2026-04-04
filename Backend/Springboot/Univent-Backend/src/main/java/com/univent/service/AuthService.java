@@ -90,7 +90,7 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        String email = tokenProvider.getEmailFromToken(refreshToken);
+        String email = tokenProvider.getEmailHashFromToken(refreshToken);
         String newAccessToken = tokenProvider.generateAccessToken(userId, email, user.getRole().name());
 
         return AuthResponse.builder()

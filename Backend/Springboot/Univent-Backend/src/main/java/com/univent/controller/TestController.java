@@ -1,5 +1,6 @@
 package com.univent.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -26,5 +27,14 @@ public class TestController {
     @PreAuthorize("hasRole('ADMIN')")
     public String adminEndpoint() {
         return "This is an admin-only endpoint";
+    }
+    @GetMapping("/debug-jwt")
+    public String debugJwt(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            return "Token: " + token;
+        }
+        return "No token found";
     }
 }

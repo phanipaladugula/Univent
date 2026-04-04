@@ -1,4 +1,4 @@
-package com.univent.security;
+package com.univent.service;
 
 import com.univent.model.entity.User;
 import com.univent.repository.UserRepository;
@@ -19,8 +19,10 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String emailHash) throws UsernameNotFoundException {
+        System.out.println("Looking for user with email hash: " + emailHash);
+
         User user = userRepository.findByEmailHash(emailHash)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + emailHash));
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email hash: " + emailHash));
 
         return org.springframework.security.core.userdetails.User
                 .withUsername(user.getEmailHash())
