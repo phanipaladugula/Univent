@@ -1,4 +1,4 @@
-package univent.model.entity;
+package com.univent.model.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
