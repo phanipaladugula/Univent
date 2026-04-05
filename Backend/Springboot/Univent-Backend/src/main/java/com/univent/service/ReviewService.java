@@ -13,7 +13,7 @@ import com.univent.model.entity.*;
 import com.univent.model.enums.ReviewStatus;
 import com.univent.repository.*;
 import lombok.RequiredArgsConstructor;
-import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,14 +22,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ReviewService {
 
     private final ReviewRepository reviewRepository;
@@ -40,6 +43,7 @@ public class ReviewService {
     private final UserRepository userRepository;
     private final CollegeProgramRepository collegeProgramRepository;
     private final ReviewVoteRepository reviewVoteRepository;
+
     @Transactional
     public ReviewResponse submitReview(User user, ReviewSubmitRequest request) {
         College college = collegeRepository.findById(request.getCollegeId())
@@ -77,12 +81,13 @@ public class ReviewService {
         user.setTotalReviews(user.getTotalReviews() + 1);
         userRepository.save(user);
 
+        log.info("Review submitted: {} by user: {}", saved.getId(), user.getAnonymousUsername());
         return mapToResponse(saved);
     }
 
     @Transactional(readOnly = true)
-    public Page<ReviewResponse> getReviewsByCollege(UUID collegeId, UUID programId,
-                                                    String sortBy, Pageable pageable) {
+    public Page<ReviewResponse> getPublishedReviewsByCollege(UUID collegeId, UUID programId,
+                                                             String sortBy, Pageable pageable) {
         Pageable sortedPageable = getSortedPageable(sortBy, pageable);
 
         Page<Review> reviews;
@@ -90,8 +95,8 @@ public class ReviewService {
             reviews = reviewRepository.findByCollegeIdAndProgramIdAndStatus(
                     collegeId, programId, ReviewStatus.PUBLISHED, sortedPageable);
         } else {
-            reviews = reviewRepository.findByCollegeIdAndProgramIdAndStatus(
-                    collegeId, null, ReviewStatus.PUBLISHED, sortedPageable);
+            reviews = reviewRepository.findByCollegeIdAndStatus(
+                    collegeId, ReviewStatus.PUBLISHED, sortedPageable);
         }
 
         return reviews.map(this::mapToResponse);
@@ -109,7 +114,6 @@ public class ReviewService {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new RuntimeException("Review not found"));
 
-        // This line was causing the error - you had redeclared reviewVoteRepository
         Optional<ReviewVote> existingVote = reviewVoteRepository.findByReviewAndUser(review, user);
 
         if (existingVote.isPresent()) {
@@ -118,13 +122,14 @@ public class ReviewService {
             String newVoteType = request.getVoteType().name();
 
             if (currentVoteType.equals(newVoteType)) {
-                // Remove vote if same type (toggle off)
+                // Remove vote (toggle off)
                 reviewVoteRepository.delete(vote);
                 if ("UP".equals(currentVoteType)) {
                     review.setUpvotes(review.getUpvotes() - 1);
                 } else {
                     review.setDownvotes(review.getDownvotes() - 1);
                 }
+                log.info("Vote removed: user {} on review {}", user.getAnonymousUsername(), reviewId);
             } else {
                 // Change vote from UP to DOWN or vice versa
                 vote.setVoteType(newVoteType);
@@ -136,6 +141,7 @@ public class ReviewService {
                     review.setUpvotes(review.getUpvotes() - 1);
                     review.setDownvotes(review.getDownvotes() + 1);
                 }
+                log.info("Vote changed: user {} on review {} to {}", user.getAnonymousUsername(), reviewId, newVoteType);
             }
         } else {
             // New vote
@@ -150,6 +156,7 @@ public class ReviewService {
             } else {
                 review.setDownvotes(review.getDownvotes() + 1);
             }
+            log.info("New vote: user {} {} on review {}", user.getAnonymousUsername(), request.getVoteType(), reviewId);
         }
 
         reviewRepository.save(review);
@@ -173,6 +180,7 @@ public class ReviewService {
         }
 
         ReviewComment saved = commentRepository.save(comment);
+        log.info("Comment added: {} on review {}", saved.getId(), reviewId);
         return mapToCommentResponse(saved);
     }
 
@@ -201,31 +209,73 @@ public class ReviewService {
         flagged.setStatus("PENDING");
 
         flaggedContentRepository.save(flagged);
+        log.info("Review flagged: {} by user {}", reviewId, user.getAnonymousUsername());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ReviewResponse> getReviewsByStatus(ReviewStatus status, Pageable pageable) {
+        return reviewRepository.findByStatus(status, pageable).map(this::mapToResponse);
     }
 
     @Transactional
-    public void updateReviewStatus(UUID reviewId, ReviewStatus status, User admin, String reason) {
+    public ReviewResponse approveReview(UUID reviewId, User admin) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new RuntimeException("Review not found"));
 
-        review.setStatus(status);
-        if (status == ReviewStatus.PUBLISHED) {
-            review.setPublishedAt(LocalDateTime.now());
-            updateCollegeStats(review.getCollege().getId());
+        if (review.getStatus() != ReviewStatus.PENDING) {
+            throw new RuntimeException("Only pending reviews can be approved");
         }
 
+        review.setStatus(ReviewStatus.PUBLISHED);
+        review.setPublishedAt(LocalDateTime.now());
+        review = reviewRepository.save(review);
+
+        // Update user's reputation
+        User user = review.getUser();
+        user.setReputation(user.getReputation() + 10);
+        userRepository.save(user);
+
+        // Update college stats
+        updateCollegeStats(review.getCollege().getId());
+
+        log.info("Review {} approved by admin {}", reviewId, admin.getAnonymousUsername());
+        return mapToResponse(review);
+    }
+
+    @Transactional
+    public void rejectReview(UUID reviewId, User admin, String reason) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new RuntimeException("Review not found"));
+
+        if (review.getStatus() != ReviewStatus.PENDING) {
+            throw new RuntimeException("Only pending reviews can be rejected");
+        }
+
+        review.setStatus(ReviewStatus.REMOVED);
         reviewRepository.save(review);
+
+        log.info("Review {} rejected by admin {} with reason: {}", reviewId, admin.getAnonymousUsername(), reason);
     }
 
     private void updateCollegeStats(UUID collegeId) {
-        BigDecimal avgRating = reviewRepository.calculateAverageRatingForCollege(collegeId);
-        Integer totalReviews = reviewRepository.countPublishedReviewsForCollege(collegeId);
+        // Calculate average rating from published reviews
+        Page<Review> publishedReviews = reviewRepository.findByCollegeIdAndStatus(
+                collegeId, ReviewStatus.PUBLISHED, Pageable.unpaged());
 
-        College college = collegeRepository.findById(collegeId).orElse(null);
-        if (college != null) {
-            college.setAverageRating(avgRating != null ? avgRating : BigDecimal.ZERO);
-            college.setTotalReviews(totalReviews != null ? totalReviews : 0);
-            collegeRepository.save(college);
+        if (publishedReviews.hasContent()) {
+            BigDecimal avgRating = publishedReviews.getContent().stream()
+                    .map(r -> BigDecimal.valueOf(r.getOverallRating()))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .divide(BigDecimal.valueOf(publishedReviews.getTotalElements()), 2, RoundingMode.HALF_UP);
+
+            College college = collegeRepository.findById(collegeId).orElse(null);
+            if (college != null) {
+                college.setAverageRating(avgRating);
+                college.setTotalReviews((int) publishedReviews.getTotalElements());
+                collegeRepository.save(college);
+                log.info("College stats updated for {}: avgRating={}, totalReviews={}",
+                        college.getName(), avgRating, publishedReviews.getTotalElements());
+            }
         }
     }
 
@@ -259,7 +309,6 @@ public class ReviewService {
                 .reputation(review.getUser().getReputation())
                 .build();
 
-        // Create CollegeResponse safely
         CollegeResponse collegeResponse = null;
         if (review.getCollege() != null) {
             collegeResponse = CollegeResponse.builder()
@@ -278,7 +327,6 @@ public class ReviewService {
                     .build();
         }
 
-        // Create ProgramResponse safely
         ProgramResponse programResponse = null;
         if (review.getProgram() != null) {
             programResponse = ProgramResponse.builder()
@@ -292,7 +340,6 @@ public class ReviewService {
                     .build();
         }
 
-        // Handle pros and cons arrays safely
         List<String> prosList = review.getPros() != null ? Arrays.asList(review.getPros()) : List.of();
         List<String> consList = review.getCons() != null ? Arrays.asList(review.getCons()) : List.of();
 
@@ -352,8 +399,11 @@ public class ReviewService {
                 .build();
     }
 
-    @Transactional(readOnly = true)
-    public Page<ReviewResponse> getReviewsByStatus(ReviewStatus status, Pageable pageable) {
-        return reviewRepository.findByStatus(status, pageable).map(this::mapToResponse);
+    @Transactional
+    public void deleteReview(UUID reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new RuntimeException("Review not found"));
+        reviewRepository.delete(review);
+        log.info("Review deleted: {}", reviewId);
     }
 }

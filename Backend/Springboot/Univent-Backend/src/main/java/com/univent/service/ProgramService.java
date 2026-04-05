@@ -99,4 +99,8 @@ public class ProgramService {
                 .updatedAt(program.getUpdatedAt())
                 .build();
     }
+    public com.univent.model.entity.Program findEntityById(UUID id) {
+        return programRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Program not found"));
+    }
 }

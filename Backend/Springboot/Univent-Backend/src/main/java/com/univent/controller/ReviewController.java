@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -46,7 +47,8 @@ public class ReviewController {
             @RequestParam(required = false) UUID programId,
             @RequestParam(required = false) String sortBy,
             @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(reviewService.getReviewsByCollege(collegeId, programId, sortBy, pageable));
+        // Only show PUBLISHED reviews to public
+        return ResponseEntity.ok(reviewService.getPublishedReviewsByCollege(collegeId, programId, sortBy, pageable));
     }
 
     @GetMapping("/{reviewId}")
@@ -92,5 +94,12 @@ public class ReviewController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
         reviewService.flagReview(user, reviewId, request);
         return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{reviewId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteReview(@PathVariable UUID reviewId) {
+        reviewService.deleteReview(reviewId);
+        return ResponseEntity.noContent().build();
     }
 }

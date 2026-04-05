@@ -38,7 +38,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints - no auth required
+                        // Public GET endpoints
                         .requestMatchers(HttpMethod.GET, "/api/v1/colleges/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/programs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/reviews/**").permitAll()
@@ -48,7 +48,12 @@ public class SecurityConfig {
                         // Auth endpoints
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
-                        // All other endpoints require authentication
+                        // Admin endpoints - require ADMIN role
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        // POST/PUT/DELETE require authentication
+                        .requestMatchers(HttpMethod.POST, "/api/v1/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

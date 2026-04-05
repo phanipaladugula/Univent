@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -29,21 +28,32 @@ public class AdminReviewController {
     private final UserRepository userRepository;
 
     @GetMapping("/pending")
-    public ResponseEntity<Page<ReviewResponse>> getPendingReviews(
-            @PageableDefault(size = 20) Pageable pageable) {
-        log.info("Admin fetching pending reviews");
+    public ResponseEntity<Page<ReviewResponse>> getPendingReviews(Pageable pageable) {
+        log.info("Fetching pending reviews for admin");
         return ResponseEntity.ok(reviewService.getReviewsByStatus(ReviewStatus.PENDING, pageable));
     }
 
+    @GetMapping("/published")
+    public ResponseEntity<Page<ReviewResponse>> getPublishedReviews(Pageable pageable) {
+        log.info("Fetching published reviews for admin");
+        return ResponseEntity.ok(reviewService.getReviewsByStatus(ReviewStatus.PUBLISHED, pageable));
+    }
+
+    @GetMapping("/flagged")
+    public ResponseEntity<Page<ReviewResponse>> getFlaggedReviews(Pageable pageable) {
+        log.info("Fetching flagged reviews for admin");
+        return ResponseEntity.ok(reviewService.getReviewsByStatus(ReviewStatus.FLAGGED, pageable));
+    }
+
     @PutMapping("/{reviewId}/approve")
-    public ResponseEntity<Void> approveReview(
+    public ResponseEntity<ReviewResponse> approveReview(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID reviewId) {
         User admin = userRepository.findByEmailHash(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("Admin not found"));
         log.info("Admin {} approving review: {}", admin.getAnonymousUsername(), reviewId);
-        reviewService.updateReviewStatus(reviewId, ReviewStatus.PUBLISHED, admin, null);
-        return ResponseEntity.ok().build();
+        ReviewResponse response = reviewService.approveReview(reviewId, admin);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{reviewId}/reject")
@@ -54,7 +64,9 @@ public class AdminReviewController {
         User admin = userRepository.findByEmailHash(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("Admin not found"));
         log.info("Admin {} rejecting review: {} with reason: {}", admin.getAnonymousUsername(), reviewId, reason);
-        reviewService.updateReviewStatus(reviewId, ReviewStatus.REMOVED, admin, reason);
+        reviewService.rejectReview(reviewId, admin, reason);
         return ResponseEntity.ok().build();
     }
+
+
 }

@@ -13,4 +13,5 @@ import java.util.UUID;
 public interface ReviewVoteRepository extends JpaRepository<ReviewVote, UUID> {
     Optional<ReviewVote> findByReviewAndUser(Review review, User user);
     long countByReviewAndVoteType(Review review, String voteType);
+    void deleteByReviewAndUser(Review review, User user);
 }

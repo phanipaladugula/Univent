@@ -33,8 +33,6 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
 
     // Add these methods to existing ReviewRepository interface
 
-    Page<Review> findByCollegeIdAndProgramIdAndStatus(UUID collegeId, UUID programId,
-                                                      ReviewStatus status, Pageable pageable);
 
     Page<Review> findByUserIdAndStatus(UUID userId, ReviewStatus status, Pageable pageable);
 
@@ -56,5 +54,7 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
     @Query("SELECT COUNT(r) FROM Review r WHERE r.college.id = :collegeId AND r.status = 'PUBLISHED'")
     Integer countPublishedReviewsForCollege(@Param("collegeId") UUID collegeId);
 
+    Page<Review> findByCollegeIdAndProgramIdAndStatus(UUID collegeId, UUID programId, ReviewStatus status, Pageable pageable);
     Page<Review> findByStatus(ReviewStatus status, Pageable pageable);
+    Page<Review> findByCollegeIdAndStatus(UUID collegeId, ReviewStatus status, Pageable pageable);
 }
