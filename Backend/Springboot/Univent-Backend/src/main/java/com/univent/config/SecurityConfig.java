@@ -37,15 +37,17 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
+                        // Public endpoints - no auth required
+                        .requestMatchers(HttpMethod.GET, "/api/v1/colleges/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/programs/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/search/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/compare/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/news/**").permitAll()
+                        // Auth endpoints
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/api/v1/colleges/**").permitAll()
-                        .requestMatchers("/api/v1/programs/**").permitAll()
-                        .requestMatchers("/api/v1/reviews/**").permitAll()
-                        .requestMatchers("/api/v1/search/**").permitAll()
-                        .requestMatchers("/api/v1/compare/**").permitAll()
-                        .requestMatchers("/api/v1/news/**").permitAll()
-                        .requestMatchers("/api/v1/test/public").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+                        // All other endpoints require authentication
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -71,4 +73,5 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
+
 }

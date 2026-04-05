@@ -95,4 +95,7 @@ public class Review extends BaseEntity {
 
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
+
+    @OneToMany(mappedBy = "review", cascade = CascadeType.ALL)
+    private List<ReviewVote> votes = new ArrayList<>();
 }
