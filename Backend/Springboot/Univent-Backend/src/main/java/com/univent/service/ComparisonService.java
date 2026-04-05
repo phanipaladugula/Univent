@@ -1,10 +1,7 @@
 package com.univent.service;
 
 import com.univent.model.dto.response.*;
-import com.univent.model.entity.College;
-import com.univent.model.entity.CollegeProgram;
-import com.univent.model.entity.Review;
-import com.univent.model.entity.SavedComparison;
+import com.univent.model.entity.*;
 import com.univent.model.enums.ReviewStatus;
 import com.univent.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -171,7 +168,7 @@ public class ComparisonService {
         if (cp.getMedianPackage() == null || cp.getFeesTotal() == null) {
             return BigDecimal.ZERO;
         }
-        // ROI = (Median Package * 4 - Total Fees) / Duration (in lakhs)
+        // ROI = (Median Package * 4 - Total Fees) / Duration (in rupees)
         BigDecimal fourYearEarning = cp.getMedianPackage().multiply(new BigDecimal("4"));
         BigDecimal netGain = fourYearEarning.subtract(cp.getFeesTotal());
         if (netGain.compareTo(BigDecimal.ZERO) < 0) return BigDecimal.ZERO;
@@ -423,7 +420,7 @@ public class ComparisonService {
     }
 
     @Transactional
-    public SavedComparison saveComparison(User user, String name, List<UUID> collegeIds, UUID programId) {
+    public SavedComparisonResponse saveComparison(User user, String name, List<UUID> collegeIds, UUID programId) {
         SavedComparison saved = new SavedComparison();
         saved.setUser(user);
         saved.setName(name);
@@ -433,12 +430,27 @@ public class ComparisonService {
                 .orElseThrow(() -> new RuntimeException("Program not found"));
         saved.setProgram(program);
 
-        return savedComparisonRepository.save(saved);
+        SavedComparison result = savedComparisonRepository.save(saved);
+
+        return SavedComparisonResponse.builder()
+                .id(result.getId())
+                .name(result.getName())
+                .collegeIds(List.of(result.getCollegeIds()))
+                .programId(result.getProgram().getId())
+                .createdAt(result.getCreatedAt())
+                .build();
     }
 
     @Transactional(readOnly = true)
-    public Page<SavedComparison> getUserSavedComparisons(User user, Pageable pageable) {
-        return savedComparisonRepository.findByUser(user, pageable);
+    public Page<SavedComparisonResponse> getUserSavedComparisons(User user, Pageable pageable) {
+        return savedComparisonRepository.findByUser(user, pageable)
+                .map(saved -> SavedComparisonResponse.builder()
+                        .id(saved.getId())
+                        .name(saved.getName())
+                        .collegeIds(List.of(saved.getCollegeIds()))
+                        .programId(saved.getProgram().getId())
+                        .createdAt(saved.getCreatedAt())
+                        .build());
     }
 
     @Transactional

@@ -3,7 +3,6 @@ package com.univent.controller;
 import com.univent.model.dto.request.SaveComparisonRequest;
 import com.univent.model.dto.response.CollegeComparisonResponse;
 import com.univent.model.dto.response.SavedComparisonResponse;
-import com.univent.model.entity.SavedComparison;
 import com.univent.model.entity.User;
 import com.univent.repository.UserRepository;
 import com.univent.service.ComparisonService;
@@ -45,10 +44,10 @@ public class ComparisonController {
         User user = userRepository.findByEmailHash(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        SavedComparison saved = comparisonService.saveComparison(
+        SavedComparisonResponse saved = comparisonService.saveComparison(
                 user, request.getName(), request.getCollegeIds(), request.getProgramId());
 
-        return ResponseEntity.ok(mapToResponse(saved));
+        return ResponseEntity.ok(saved);
     }
 
     @GetMapping("/saved")
@@ -58,8 +57,7 @@ public class ComparisonController {
         User user = userRepository.findByEmailHash(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return ResponseEntity.ok(comparisonService.getUserSavedComparisons(user, pageable)
-                .map(this::mapToResponse));
+        return ResponseEntity.ok(comparisonService.getUserSavedComparisons(user, pageable));
     }
 
     @DeleteMapping("/saved/{comparisonId}")
@@ -71,15 +69,5 @@ public class ComparisonController {
 
         comparisonService.deleteSavedComparison(user, comparisonId);
         return ResponseEntity.noContent().build();
-    }
-
-    private SavedComparisonResponse mapToResponse(SavedComparison saved) {
-        return SavedComparisonResponse.builder()
-                .id(saved.getId())
-                .name(saved.getName())
-                .collegeIds(List.of(saved.getCollegeIds()))
-                .programId(saved.getProgram().getId())
-                .createdAt(saved.getCreatedAt())
-                .build();
     }
 }

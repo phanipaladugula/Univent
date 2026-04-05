@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ReviewService {
 
+    private final MaterializedViewService materializedViewService;
     private final ReviewRepository reviewRepository;
     private final ReviewCommentRepository commentRepository;
     private final FlaggedContentRepository flaggedContentRepository;
@@ -229,6 +230,11 @@ public class ReviewService {
         review.setStatus(ReviewStatus.PUBLISHED);
         review.setPublishedAt(LocalDateTime.now());
         review = reviewRepository.save(review);
+
+        // After approving review, refresh materialized views
+        materializedViewService.refreshCollegeRankings();
+        materializedViewService.refreshProgramLeaderboard();
+        materializedViewService.refreshCollegeStats();
 
         // Update user's reputation
         User user = review.getUser();
