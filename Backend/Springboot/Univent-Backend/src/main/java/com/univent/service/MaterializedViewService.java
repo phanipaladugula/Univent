@@ -25,7 +25,7 @@ public class MaterializedViewService {
     /**
      * Refresh all materialized views daily at 2:00 AM IST
      */
-    @Scheduled(cron = "0 0 20:30? * *", zone = "Asia/Kolkata")
+    @Scheduled(cron = "0 0 2 * * ?", zone = "Asia/Kolkata")
     @Transactional
     public void refreshAllMaterializedViews() {
         log.info("Starting refresh of all materialized views");

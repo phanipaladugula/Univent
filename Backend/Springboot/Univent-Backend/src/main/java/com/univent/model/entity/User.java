@@ -5,8 +5,8 @@ import com.univent.model.enums.VerificationStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "users")
@@ -45,4 +45,24 @@ public class User extends BaseEntity {
 
     @Column(name = "last_active_at")
     private LocalDateTime lastActiveAt;
+
+    // ========== VERIFICATION FIELDS (ADD THESE) ==========
+
+    @Column(name = "id_card_path")
+    private String idCardPath;
+
+    @Column(name = "id_card_uploaded_at")
+    private LocalDateTime idCardUploadedAt;
+
+    @Column(name = "verification_requested_at")
+    private LocalDateTime verificationRequestedAt;
+
+    @Column(name = "verification_reviewed_by")
+    private UUID verificationReviewedBy;
+
+    @Column(name = "verification_reviewed_at")
+    private LocalDateTime verificationReviewedAt;
+
+    @Column(name = "verification_rejection_reason")
+    private String verificationRejectionReason;
 }
