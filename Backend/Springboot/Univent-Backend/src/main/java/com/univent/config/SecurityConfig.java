@@ -3,6 +3,7 @@ package com.univent.config;
 import com.univent.security.JwtAuthenticationFilter;
 import com.univent.service.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpMethod;  // ADD THIS IMPORT
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;

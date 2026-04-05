@@ -13,6 +13,7 @@ import com.univent.model.entity.*;
 import com.univent.model.enums.ReviewStatus;
 import com.univent.repository.*;
 import lombok.RequiredArgsConstructor;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -108,7 +109,7 @@ public class ReviewService {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new RuntimeException("Review not found"));
 
-        ReviewVoteRepository reviewVoteRepository;
+        // This line was causing the error - you had redeclared reviewVoteRepository
         Optional<ReviewVote> existingVote = reviewVoteRepository.findByReviewAndUser(review, user);
 
         if (existingVote.isPresent()) {

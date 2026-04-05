@@ -35,9 +35,7 @@ public class AuthService {
     public void sendRegistrationOtp(RegisterRequest request) {
         String emailHash = hashEmail(request.getEmail());
 
-        // Check if user exists
         if (!userRepository.existsByEmailHash(emailHash)) {
-            // Create new user
             User user = new User();
             user.setEmailHash(emailHash);
             user.setAnonymousUsername(generateAnonymousUsername());
@@ -64,11 +62,9 @@ public class AuthService {
         User user = userRepository.findByEmailHash(emailHash)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Update last active
         user.setLastActiveAt(LocalDateTime.now());
         userRepository.save(user);
 
-        // Generate tokens
         String accessToken = tokenProvider.generateAccessToken(user.getId(), request.getEmail(), user.getRole().name());
         String refreshToken = tokenProvider.generateRefreshToken(user.getId());
 
@@ -76,22 +72,26 @@ public class AuthService {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
-                .expiresIn(900000L) // 15 minutes in milliseconds
+                .expiresIn(900000L)
                 .user(mapToUserResponse(user))
                 .build();
     }
 
     public AuthResponse refreshAccessToken(String refreshToken) {
-        if (!tokenProvider.validateToken(refreshToken) || !"refresh".equals(tokenProvider.getTokenType(refreshToken))) {
-            throw new RuntimeException("Invalid refresh token");
+        if (!tokenProvider.validateToken(refreshToken)) {
+            throw new RuntimeException("Invalid or expired refresh token");
+        }
+
+        String tokenType = tokenProvider.getTokenType(refreshToken);
+        if (!"refresh".equals(tokenType)) {
+            throw new RuntimeException("Invalid token type");
         }
 
         UUID userId = tokenProvider.getUserIdFromToken(refreshToken);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        String email = tokenProvider.getEmailHashFromToken(refreshToken);
-        String newAccessToken = tokenProvider.generateAccessToken(userId, email, user.getRole().name());
+        String newAccessToken = tokenProvider.generateAccessTokenFromHash(userId, user.getEmailHash(), user.getRole().name());
 
         return AuthResponse.builder()
                 .accessToken(newAccessToken)
@@ -118,7 +118,6 @@ public class AuthService {
         int number = (int) (Math.random() * 100);
         String username = adjective + noun + number;
 
-        // Ensure uniqueness
         while (userRepository.existsByAnonymousUsername(username)) {
             number = (int) (Math.random() * 1000);
             username = adjective + noun + number;

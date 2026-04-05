@@ -30,16 +30,26 @@ public class JwtTokenProvider {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
+    // For initial login - accepts email and hashes it
     public String generateAccessToken(UUID userId, String email, String role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId.toString());
-        claims.put("emailHash", hashEmail(email)); // Change from "email" to "emailHash"
+        claims.put("emailHash", hashEmail(email));
         claims.put("role", role);
         claims.put("type", "access");
         return createToken(claims, accessTokenExpiration);
     }
 
-    // Add this helper method to hash email
+    // For refresh token - accepts already hashed email
+    public String generateAccessTokenFromHash(UUID userId, String emailHash, String role) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", userId.toString());
+        claims.put("emailHash", emailHash);
+        claims.put("role", role);
+        claims.put("type", "access");
+        return createToken(claims, accessTokenExpiration);
+    }
+
     private String hashEmail(String email) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
