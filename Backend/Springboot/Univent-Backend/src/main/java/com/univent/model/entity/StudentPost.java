@@ -46,6 +46,9 @@ public class StudentPost {
     @Column(name = "rejection_reason", length = 255)
     private String rejectionReason;
 
+    @Column(name = "published_at")  // ADD THIS FIELD
+    private LocalDateTime publishedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

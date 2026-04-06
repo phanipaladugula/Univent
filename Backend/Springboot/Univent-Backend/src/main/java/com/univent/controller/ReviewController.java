@@ -8,6 +8,7 @@ import com.univent.model.dto.response.ReviewCommentResponse;
 import com.univent.model.dto.response.ReviewResponse;
 import com.univent.model.entity.User;
 import com.univent.repository.UserRepository;
+import com.univent.service.FlaggedContentService;
 import com.univent.service.ReviewService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +31,7 @@ public class ReviewController {
 
     private final ReviewService reviewService;
     private final UserRepository userRepository;
-
+    private final FlaggedContentService flaggedContentService;
     @PostMapping
     public ResponseEntity<ReviewResponse> submitReview(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -92,7 +93,7 @@ public class ReviewController {
             @Valid @RequestBody FlagContentRequest request) {
         User user = userRepository.findByEmailHash(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        reviewService.flagReview(user, reviewId, request);
+        flaggedContentService.flagReview(user, reviewId, request.getReason());
         return ResponseEntity.ok().build();
     }
 
@@ -101,5 +102,16 @@ public class ReviewController {
     public ResponseEntity<Void> deleteReview(@PathVariable UUID reviewId) {
         reviewService.deleteReview(reviewId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/comments/{commentId}/flag")
+    public ResponseEntity<Void> flagComment(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable UUID commentId,
+            @Valid @RequestBody FlagContentRequest request) {
+        User user = userRepository.findByEmailHash(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        flaggedContentService.flagComment(user, commentId, request.getReason());
+        return ResponseEntity.ok().build();
     }
 }

@@ -1,15 +1,18 @@
 package com.univent.model.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "colleges")
-@Getter
-@Setter
 public class College extends BaseEntity {
 
     @Column(nullable = false)
@@ -19,7 +22,6 @@ public class College extends BaseEntity {
     private String slug;
 
     private String city;
-
     private String state;
 
     @Column(name = "college_type")

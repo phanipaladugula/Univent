@@ -3,15 +3,11 @@ package com.univent.model.entity;
 import com.univent.model.enums.Role;
 import com.univent.model.enums.VerificationStatus;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "users")
-@Getter
-@Setter
 public class User extends BaseEntity {
 
     @Column(name = "email_hash", unique = true, nullable = false)
@@ -46,8 +42,7 @@ public class User extends BaseEntity {
     @Column(name = "last_active_at")
     private LocalDateTime lastActiveAt;
 
-    // ========== VERIFICATION FIELDS (ADD THESE) ==========
-
+    // Verification fields
     @Column(name = "id_card_path")
     private String idCardPath;
 
@@ -65,4 +60,53 @@ public class User extends BaseEntity {
 
     @Column(name = "verification_rejection_reason")
     private String verificationRejectionReason;
+
+    // Getters and Setters
+    public String getEmailHash() { return emailHash; }
+    public void setEmailHash(String emailHash) { this.emailHash = emailHash; }
+
+    public String getAnonymousUsername() { return anonymousUsername; }
+    public void setAnonymousUsername(String anonymousUsername) { this.anonymousUsername = anonymousUsername; }
+
+    public String getAvatarColor() { return avatarColor; }
+    public void setAvatarColor(String avatarColor) { this.avatarColor = avatarColor; }
+
+    public Role getRole() { return role; }
+    public void setRole(Role role) { this.role = role; }
+
+    public VerificationStatus getVerificationStatus() { return verificationStatus; }
+    public void setVerificationStatus(VerificationStatus verificationStatus) { this.verificationStatus = verificationStatus; }
+
+    public Boolean getVerifiedBadge() { return verifiedBadge; }
+    public void setVerifiedBadge(Boolean verifiedBadge) { this.verifiedBadge = verifiedBadge; }
+
+    public Integer getReputation() { return reputation; }
+    public void setReputation(Integer reputation) { this.reputation = reputation; }
+
+    public Integer getTotalReviews() { return totalReviews; }
+    public void setTotalReviews(Integer totalReviews) { this.totalReviews = totalReviews; }
+
+    public Integer getGraduationYear() { return graduationYear; }
+    public void setGraduationYear(Integer graduationYear) { this.graduationYear = graduationYear; }
+
+    public LocalDateTime getLastActiveAt() { return lastActiveAt; }
+    public void setLastActiveAt(LocalDateTime lastActiveAt) { this.lastActiveAt = lastActiveAt; }
+
+    public String getIdCardPath() { return idCardPath; }
+    public void setIdCardPath(String idCardPath) { this.idCardPath = idCardPath; }
+
+    public LocalDateTime getIdCardUploadedAt() { return idCardUploadedAt; }
+    public void setIdCardUploadedAt(LocalDateTime idCardUploadedAt) { this.idCardUploadedAt = idCardUploadedAt; }
+
+    public LocalDateTime getVerificationRequestedAt() { return verificationRequestedAt; }
+    public void setVerificationRequestedAt(LocalDateTime verificationRequestedAt) { this.verificationRequestedAt = verificationRequestedAt; }
+
+    public UUID getVerificationReviewedBy() { return verificationReviewedBy; }
+    public void setVerificationReviewedBy(UUID verificationReviewedBy) { this.verificationReviewedBy = verificationReviewedBy; }
+
+    public LocalDateTime getVerificationReviewedAt() { return verificationReviewedAt; }
+    public void setVerificationReviewedAt(LocalDateTime verificationReviewedAt) { this.verificationReviewedAt = verificationReviewedAt; }
+
+    public String getVerificationRejectionReason() { return verificationRejectionReason; }
+    public void setVerificationRejectionReason(String verificationRejectionReason) { this.verificationRejectionReason = verificationRejectionReason; }
 }

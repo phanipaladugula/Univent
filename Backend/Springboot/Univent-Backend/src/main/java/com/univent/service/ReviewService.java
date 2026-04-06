@@ -130,9 +130,8 @@ public class ReviewService {
                 } else {
                     review.setDownvotes(review.getDownvotes() - 1);
                 }
-                log.info("Vote removed: user {} on review {}", user.getAnonymousUsername(), reviewId);
             } else {
-                // Change vote from UP to DOWN or vice versa
+                // Change vote
                 vote.setVoteType(newVoteType);
                 reviewVoteRepository.save(vote);
                 if ("UP".equals(newVoteType)) {
@@ -142,7 +141,6 @@ public class ReviewService {
                     review.setUpvotes(review.getUpvotes() - 1);
                     review.setDownvotes(review.getDownvotes() + 1);
                 }
-                log.info("Vote changed: user {} on review {} to {}", user.getAnonymousUsername(), reviewId, newVoteType);
             }
         } else {
             // New vote
@@ -157,7 +155,6 @@ public class ReviewService {
             } else {
                 review.setDownvotes(review.getDownvotes() + 1);
             }
-            log.info("New vote: user {} {} on review {}", user.getAnonymousUsername(), request.getVoteType(), reviewId);
         }
 
         reviewRepository.save(review);

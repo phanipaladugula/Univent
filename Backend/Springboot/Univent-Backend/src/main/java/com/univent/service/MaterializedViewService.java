@@ -66,6 +66,7 @@ public class MaterializedViewService {
     @Transactional
     public void fetchNewsAutomatically() {
         log.info("Scheduled news fetch started");
+         RssFeedService rssFeedService=null;
         rssFeedService.fetchAndStoreNews();
     }
 }

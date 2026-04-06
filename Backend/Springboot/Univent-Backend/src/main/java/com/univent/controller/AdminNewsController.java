@@ -1,6 +1,5 @@
 package com.univent.controller;
 
-import org.springframework.data.domain.Sort;
 import com.univent.model.entity.StudentPost;
 import com.univent.model.entity.User;
 import com.univent.model.enums.PostStatus;

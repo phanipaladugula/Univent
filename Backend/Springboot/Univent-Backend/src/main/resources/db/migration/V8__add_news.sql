@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS news_articles (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
--- Student posts table
+-- Student posts table (UPDATED with published_at)
 CREATE TABLE IF NOT EXISTS student_posts (
                                              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id),
@@ -26,10 +26,10 @@ CREATE TABLE IF NOT EXISTS student_posts (
     moderated_by UUID REFERENCES users(id),
     moderated_at TIMESTAMP,
     rejection_reason VARCHAR(255),
+    published_at TIMESTAMP,  -- ADD THIS LINE
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
-
 -- News upvotes table (track unique upvotes)
 CREATE TABLE IF NOT EXISTS news_upvotes (
                                             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
