@@ -5,22 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="09ebec84-1c9e-4700-93fe-90a8a5adcdad" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/jarRepositories.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Univent-Backend/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/model/entity/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/model/entity/User.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/model/enums/VerificationStatus.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/model/enums/VerificationStatus.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/repository/UserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/repository/UserRepository.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/MaterializedViewService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/MaterializedViewService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/resources/application.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Springboot/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Springboot/application.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Springboot/db/migration/V2_add_review_comments_and_flags.sql" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -80,6 +68,7 @@
 }</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\phani\VScode\Projects\Univent\Backend\Springboot\Univent-Backend\src\main\java\com\univent\controller" />
       <recent name="C:\Users\phani\VScode\Projects\Univent\Backend\Springboot\Univent-Backend\src\main\resources\db\migration" />
       <recent name="C:\Users\phani\VScode\Projects\Univent\Backend\Springboot\Univent-Backend\src\main\java\com\univent" />
     </key>

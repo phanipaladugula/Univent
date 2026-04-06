@@ -60,4 +60,12 @@ public class MaterializedViewService {
         log.debug("Refreshing mv_college_stats");
         entityManager.createNativeQuery(REFRESH_COLLEGE_STATS).executeUpdate();
     }
+
+    // Add this method to an existing service or create a new one
+    @Scheduled(cron = "0 0 */6 * * *", zone = "Asia/Kolkata") // Every 6 hours
+    @Transactional
+    public void fetchNewsAutomatically() {
+        log.info("Scheduled news fetch started");
+        rssFeedService.fetchAndStoreNews();
+    }
 }
