@@ -1,0 +1,63 @@
+# Environments
+.env
+.env.*
+!.env.example
+.env.local
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Mac OS
+.DS_Store
+
+# Node/Frontend (if applicable later)
+node_modules/
+dist/
+build/
+
+# Java / Spring Boot
+target/
+*.jar
+*.war
+*.class
+.mvn/
+logs/
+out/
+
+# Go
+Backend/Go/edge-service/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+
+# Infrastructure / Docker
+postgres_data/
+redis_data/
+kafka_data/
+qdrant_data/
+minio_data/
+grafana_data/
+
+# Temporary files
+/tmp/

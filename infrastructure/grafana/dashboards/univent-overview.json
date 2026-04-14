@@ -1,0 +1,41 @@
+{
+  "title": "Univent Gateway Overview",
+  "timezone": "browser",
+  "refresh": "5s",
+  "schemaVersion": 36,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Edge Service Real-Time Requests (Total)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total[1m])) by (method)",
+          "legendFormat": "{{method}} Requests/Sec"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Python AI Endpoints",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{job=\"python-ai\"}[5m]))",
+          "legendFormat": "AI Conversions / Min"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Median Latency (Go API)",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50 Response Time (秒)"
+        }
+      ]
+    }
+  ]
+}

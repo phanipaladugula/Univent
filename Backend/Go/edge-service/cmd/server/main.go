@@ -71,6 +71,7 @@ func main() {
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
 	r.Use(middleware.LoggingMiddleware)
+	r.Use(middleware.MetricsMiddleware)
 	r.Use(chimw.Recoverer)
 	r.Use(fingerprint.Middleware)
 	r.Use(rateLimiter.Middleware)

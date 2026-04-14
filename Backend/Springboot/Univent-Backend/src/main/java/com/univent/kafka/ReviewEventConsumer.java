@@ -61,7 +61,7 @@ public class ReviewEventConsumer {
             }
 
             Review review = optReview.get();
-            review.setSentiment(sentiment);
+            review.setSentiment(com.univent.model.enums.SentimentType.valueOf(sentiment.toUpperCase()));
             review.setSentimentScore(java.math.BigDecimal.valueOf(sentimentScore));
             review.setExtractedTopics(topics.toArray(new String[0]));
             review.setIsAiProcessed(true);
