@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'spring-boot'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['spring-boot:8080']
+
+  - job_name: 'go-edge'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['go-edge:9090']
+
+  - job_name: 'python-ai'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['python-ai:8000']

@@ -22,9 +22,13 @@ public class ProgramService {
 
     @Transactional
     public ProgramResponse createProgram(ProgramRequest request) {
+        // Generate unique slug
+        String baseSlug = slugGenerator.generateSlug(request.getName());
+        String uniqueSlug = generateUniqueSlug(baseSlug);
+
         Program program = new Program();
         program.setName(request.getName());
-        program.setSlug(slugGenerator.generateSlug(request.getName()));
+        program.setSlug(uniqueSlug);
         program.setCategory(request.getCategory());
         program.setDegree(request.getDegree());
         program.setDurationYears(request.getDurationYears());
@@ -32,6 +36,18 @@ public class ProgramService {
 
         Program saved = programRepository.save(program);
         return mapToResponse(saved);
+    }
+
+    private String generateUniqueSlug(String baseSlug) {
+        String slug = baseSlug;
+        int counter = 1;
+
+        while (programRepository.existsBySlug(slug)) {
+            slug = baseSlug + "-" + counter;
+            counter++;
+        }
+
+        return slug;
     }
 
     @Transactional(readOnly = true)
@@ -68,7 +84,11 @@ public class ProgramService {
                 .orElseThrow(() -> new RuntimeException("Program not found with id: " + id));
 
         program.setName(request.getName());
-        program.setSlug(slugGenerator.generateSlug(request.getName()));
+        // Only update slug if name changed
+        if (!program.getName().equals(request.getName())) {
+            String baseSlug = slugGenerator.generateSlug(request.getName());
+            program.setSlug(generateUniqueSlug(baseSlug));
+        }
         program.setCategory(request.getCategory());
         program.setDegree(request.getDegree());
         program.setDurationYears(request.getDurationYears());
@@ -99,6 +119,7 @@ public class ProgramService {
                 .updatedAt(program.getUpdatedAt())
                 .build();
     }
+
     public com.univent.model.entity.Program findEntityById(UUID id) {
         return programRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Program not found"));

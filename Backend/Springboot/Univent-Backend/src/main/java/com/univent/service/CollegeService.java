@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -22,9 +23,13 @@ public class CollegeService {
 
     @Transactional
     public CollegeResponse createCollege(CollegeRequest request) {
+        // Generate unique slug
+        String baseSlug = slugGenerator.generateSlug(request.getName());
+        String uniqueSlug = generateUniqueSlug(baseSlug);
+
         College college = new College();
         college.setName(request.getName());
-        college.setSlug(slugGenerator.generateSlug(request.getName()));
+        college.setSlug(uniqueSlug);
         college.setCity(request.getCity());
         college.setState(request.getState());
         college.setCollegeType(request.getCollegeType());
@@ -32,11 +37,23 @@ public class CollegeService {
         college.setEmailDomain(request.getEmailDomain());
         college.setLogoUrl(request.getLogoUrl());
         college.setIsVerified(false);
-        college.setAverageRating(java.math.BigDecimal.ZERO);
+        college.setAverageRating(BigDecimal.ZERO);
         college.setTotalReviews(0);
 
         College saved = collegeRepository.save(college);
         return mapToResponse(saved);
+    }
+
+    private String generateUniqueSlug(String baseSlug) {
+        String slug = baseSlug;
+        int counter = 1;
+
+        while (collegeRepository.existsBySlug(slug)) {
+            slug = baseSlug + "-" + counter;
+            counter++;
+        }
+
+        return slug;
     }
 
     @Transactional(readOnly = true)
@@ -81,7 +98,11 @@ public class CollegeService {
                 .orElseThrow(() -> new RuntimeException("College not found with id: " + id));
 
         college.setName(request.getName());
-        college.setSlug(slugGenerator.generateSlug(request.getName()));
+        // Only update slug if name changed
+        if (!college.getName().equals(request.getName())) {
+            String baseSlug = slugGenerator.generateSlug(request.getName());
+            college.setSlug(generateUniqueSlug(baseSlug));
+        }
         college.setCity(request.getCity());
         college.setState(request.getState());
         college.setCollegeType(request.getCollegeType());

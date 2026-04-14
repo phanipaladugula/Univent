@@ -1,0 +1,133 @@
+package kafka
+
+import (
+	"context"
+	"encoding/json"
+	"log"
+	"time"
+
+	kafkago "github.com/segmentio/kafka-go"
+
+	"github.com/univent/edge-service/internal/model"
+	"github.com/univent/edge-service/internal/service"
+)
+
+const (
+	TopicNotificationOutbound = "notification.outbound"
+	TopicAuditEvents          = "audit.events"
+)
+
+type Consumer struct {
+	brokers        []string
+	notifService   *service.NotificationService
+	auditService   *service.AuditService
+	cancel         context.CancelFunc
+}
+
+func NewConsumer(brokers []string, notifService *service.NotificationService, auditService *service.AuditService) *Consumer {
+	return &Consumer{
+		brokers:      brokers,
+		notifService: notifService,
+		auditService: auditService,
+	}
+}
+
+func (c *Consumer) Start(ctx context.Context) {
+	ctx, cancel := context.WithCancel(ctx)
+	c.cancel = cancel
+
+	go c.consumeNotifications(ctx)
+	go c.consumeAuditEvents(ctx)
+
+	log.Println("📡 Kafka consumers started")
+}
+
+func (c *Consumer) Stop() {
+	if c.cancel != nil {
+		c.cancel()
+	}
+}
+
+func (c *Consumer) consumeNotifications(ctx context.Context) {
+	reader := kafkago.NewReader(kafkago.ReaderConfig{
+		Brokers:        c.brokers,
+		Topic:          TopicNotificationOutbound,
+		GroupID:         "go-edge-notifications",
+		MinBytes:       1,
+		MaxBytes:       10e6,
+		MaxWait:        500 * time.Millisecond,
+		CommitInterval: time.Second,
+		StartOffset:    kafkago.LastOffset,
+	})
+	defer reader.Close()
+
+	log.Printf("📡 Consuming from %s", TopicNotificationOutbound)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		msg, err := reader.ReadMessage(ctx)
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			log.Printf("⚠️ Error reading notification: %v", err)
+			time.Sleep(time.Second)
+			continue
+		}
+
+		var event model.NotificationEvent
+		if err := json.Unmarshal(msg.Value, &event); err != nil {
+			log.Printf("⚠️ Error parsing notification event: %v", err)
+			continue
+		}
+
+		c.notifService.HandleNotificationEvent(event)
+	}
+}
+
+func (c *Consumer) consumeAuditEvents(ctx context.Context) {
+	reader := kafkago.NewReader(kafkago.ReaderConfig{
+		Brokers:        c.brokers,
+		Topic:          TopicAuditEvents,
+		GroupID:         "go-edge-audit",
+		MinBytes:       1,
+		MaxBytes:       10e6,
+		MaxWait:        500 * time.Millisecond,
+		CommitInterval: time.Second,
+		StartOffset:    kafkago.LastOffset,
+	})
+	defer reader.Close()
+
+	log.Printf("📡 Consuming from %s", TopicAuditEvents)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		msg, err := reader.ReadMessage(ctx)
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			log.Printf("⚠️ Error reading audit event: %v", err)
+			time.Sleep(time.Second)
+			continue
+		}
+
+		var event model.AuditEvent
+		if err := json.Unmarshal(msg.Value, &event); err != nil {
+			log.Printf("⚠️ Error parsing audit event: %v", err)
+			continue
+		}
+
+		c.auditService.HandleAuditEvent(event)
+	}
+}

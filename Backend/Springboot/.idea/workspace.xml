@@ -6,17 +6,18 @@
   <component name="ChangeListManager">
     <list default="true" id="09ebec84-1c9e-4700-93fe-90a8a5adcdad" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/controller/AdminNewsController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/controller/AdminNewsController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/model/PostStatus.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/model/dto/request/NewsController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/controller/NewsController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/model/entity/BaseEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/model/entity/BaseEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/model/entity/College.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/model/entity/College.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/model/entity/Program.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/model/entity/Program.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/model/entity/StudentPost.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/model/entity/StudentPost.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/model/entity/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/model/entity/User.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/repository/NewsUpvote.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/model/entity/NewsUpvote.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/MaterializedViewService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/MaterializedViewService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/resources/db/migration/V8__add_news.sql" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/resources/db/migration/V8__add_news.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Univent-Backend/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/BackendApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/BackendApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/config/DotenvConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/config/DotenvConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/config/SecurityConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/exception/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/exception/GlobalExceptionHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/repository/CollegeRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/repository/CollegeRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/repository/ProgramRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/repository/ProgramRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/AuthService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/AuthService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/CollegeService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/CollegeService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/ProgramService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/ProgramService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/ReviewService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/ReviewService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/resources/application.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -54,40 +55,41 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.BackendApplication.executor": "Run",
-    "Downloaded.Files.Path.Enabled": "false",
-    "Maven.backend [clean].executor": "Run",
-    "Maven.backend [compile].executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Repository.Attach.Annotations": "false",
-    "Repository.Attach.JavaDocs": "false",
-    "Repository.Attach.Sources": "false",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "Spring Boot.BackendApplication.executor": "Run",
-    "Spring Boot.Univent Backend.executor": "Run",
-    "git-widget-placeholder": "main",
-    "ignore.virus.scanning.warn.message": "true",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/phani/VScode/Projects/Univent/Backend/Springboot",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.0",
-    "run.code.analysis.last.selected.profile": "pProject Default",
-    "settings.editor.selected.configurable": "preferences.pluginManager"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.BackendApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Downloaded.Files.Path.Enabled&quot;: &quot;false&quot;,
+    &quot;Maven.backend [clean].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.backend [compile].executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Repository.Attach.Annotations&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.JavaDocs&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.Sources&quot;: &quot;false&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;Spring Boot.BackendApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.Univent Backend.executor&quot;: &quot;Run&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/phani/VScode/Projects/Univent/Backend/Springboot&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
   },
-  "keyToStringList": {
-    "DatabaseDriversLRU": [
-      "postgresql"
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;postgresql&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\phani\VScode\Projects\Univent\Backend\Springboot\Univent-Backend" />
       <recent name="C:\Users\phani\VScode\Projects\Univent\Backend\Springboot\Univent-Backend\src\main\java\com\univent\controller" />
       <recent name="C:\Users\phani\VScode\Projects\Univent\Backend\Springboot\Univent-Backend\src\main\resources\db\migration" />
       <recent name="C:\Users\phani\VScode\Projects\Univent\Backend\Springboot\Univent-Backend\src\main\java\com\univent" />

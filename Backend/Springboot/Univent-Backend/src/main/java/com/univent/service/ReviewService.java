@@ -1,4 +1,5 @@
 package com.univent.service;
+import org.springframework.scheduling.annotation.Async;
 
 import com.univent.model.dto.request.FlagContentRequest;
 import com.univent.model.dto.request.ReviewCommentRequest;
@@ -215,6 +216,13 @@ public class ReviewService {
         return reviewRepository.findByStatus(status, pageable).map(this::mapToResponse);
     }
 
+    // Add this method to ReviewService.java for async refresh
+
+
+    // Add this to the class
+    private final AsyncMaterializedViewRefreshService asyncRefreshService;
+
+    // Replace the approveReview method's refresh calls with async version
     @Transactional
     public ReviewResponse approveReview(UUID reviewId, User admin) {
         Review review = reviewRepository.findById(reviewId)
@@ -228,10 +236,8 @@ public class ReviewService {
         review.setPublishedAt(LocalDateTime.now());
         review = reviewRepository.save(review);
 
-        // After approving review, refresh materialized views
-        materializedViewService.refreshCollegeRankings();
-        materializedViewService.refreshProgramLeaderboard();
-        materializedViewService.refreshCollegeStats();
+        // ASYNC refresh - non-blocking
+        asyncRefreshService.refreshMaterializedViewsAsync();
 
         // Update user's reputation
         User user = review.getUser();
@@ -244,7 +250,6 @@ public class ReviewService {
         log.info("Review {} approved by admin {}", reviewId, admin.getAnonymousUsername());
         return mapToResponse(review);
     }
-
     @Transactional
     public void rejectReview(UUID reviewId, User admin, String reason) {
         Review review = reviewRepository.findById(reviewId)

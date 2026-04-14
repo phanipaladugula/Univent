@@ -11,5 +11,9 @@ import java.util.UUID;
 @Repository
 public interface ProgramRepository extends JpaRepository<Program, UUID> {
     Optional<Program> findBySlug(String slug);
+
+    // ADD THIS METHOD - for slug collision checking
+    boolean existsBySlug(String slug);
+
     List<Program> findByCategory(String category);
 }

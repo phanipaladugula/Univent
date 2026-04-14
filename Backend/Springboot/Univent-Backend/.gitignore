@@ -34,3 +34,18 @@ build/
 
 .env
 .env.production
+
+# Environment variables
+.env.*
+!.env.example
+
+# IDE
+.idea/
+
+.settings/
+
+# Build
+*.log
+*.jar
+*.war
+*.ear

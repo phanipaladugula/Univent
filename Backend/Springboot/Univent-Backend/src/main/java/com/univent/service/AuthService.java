@@ -10,12 +10,17 @@ import com.univent.model.enums.VerificationStatus;
 import com.univent.repository.UserRepository;
 import com.univent.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.HexFormat;
 import java.util.UUID;
 
@@ -28,12 +33,15 @@ public class AuthService {
     private final EmailService emailService;
     private final JwtTokenProvider tokenProvider;
 
+    @Value("${app.email.salt.pepper:UniventSecretPepper2025}")
+    private String pepper;
+
     private static final String[] ADJECTIVES = {"Swift", "Calm", "Brave", "Witty", "Clever", "Bold", "Mighty", "Silent"};
     private static final String[] NOUNS = {"Panda", "Eagle", "Tiger", "Wolf", "Falcon", "Shark", "Dragon", "Phoenix"};
 
     @Transactional
     public void sendRegistrationOtp(RegisterRequest request) {
-        String emailHash = hashEmail(request.getEmail());
+        String emailHash = hashEmailWithSalt(request.getEmail());
 
         if (!userRepository.existsByEmailHash(emailHash)) {
             User user = new User();
@@ -58,7 +66,7 @@ public class AuthService {
             throw new RuntimeException("Invalid or expired OTP");
         }
 
-        String emailHash = hashEmail(request.getEmail());
+        String emailHash = hashEmailWithSalt(request.getEmail());
         User user = userRepository.findByEmailHash(emailHash)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -102,6 +110,38 @@ public class AuthService {
                 .build();
     }
 
+    // Enhanced email hashing with salt and pepper
+    private String hashEmailWithSalt(String email) {
+        try {
+            // Generate a unique salt for this email
+            String salt = generateSaltForEmail(email);
+            String saltedEmail = salt + email + pepper;
+
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(saltedEmail.toLowerCase().trim().getBytes());
+
+            // Store both hash and salt (salt can be stored separately or embedded)
+            String hashHex = HexFormat.of().formatHex(hash);
+            return salt + ":" + hashHex;
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Error hashing email", e);
+        }
+    }
+
+    private String generateSaltForEmail(String email) {
+        try {
+            // Deterministic salt based on email to ensure same hash for same email
+            // But still provides protection against rainbow tables
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] emailHash = digest.digest(email.toLowerCase().trim().getBytes());
+            // Take first 16 bytes as salt
+            return HexFormat.of().formatHex(emailHash).substring(0, 16);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Error generating salt", e);
+        }
+    }
+
+    // Backward compatibility method for existing hashes
     private String hashEmail(String email) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

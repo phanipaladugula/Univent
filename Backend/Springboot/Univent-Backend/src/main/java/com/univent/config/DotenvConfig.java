@@ -1,24 +1,37 @@
 package com.univent.config;
 
 import io.github.cdimascio.dotenv.Dotenv;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.env.EnvironmentPostProcessor;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.MapPropertySource;
+import org.springframework.stereotype.Component;
 
-import jakarta.annotation.PostConstruct;
+import java.util.HashMap;
+import java.util.Map;
 
-@Configuration
-public class DotenvConfig {
+@Component
+public class DotenvConfig implements EnvironmentPostProcessor {
 
-    @PostConstruct
-    public void loadEnv() {
+    @Override
+    public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         try {
-            Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
+            // Try to load .env file from project root
+            Dotenv dotenv = Dotenv.configure()
+                    .directory("./")
+                    .ignoreIfMissing()
+                    .load();
+
+            Map<String, Object> envMap = new HashMap<>();
             dotenv.entries().forEach(entry -> {
-                System.setProperty(entry.getKey(), entry.getValue());
+                envMap.put(entry.getKey(), entry.getValue());
+                System.out.println("Loaded: " + entry.getKey() + " = " + entry.getValue());
             });
-            System.out.println("✅ Loaded environment variables from .env file");
+
+            environment.getPropertySources().addFirst(new MapPropertySource("dotenv", envMap));
+            System.out.println("✅ Successfully loaded .env file with " + envMap.size() + " variables");
         } catch (Exception e) {
-            System.out.println("⚠️  No .env file found, using system environment variables");
+            System.out.println("⚠️ No .env file found: " + e.getMessage());
         }
     }
 }
