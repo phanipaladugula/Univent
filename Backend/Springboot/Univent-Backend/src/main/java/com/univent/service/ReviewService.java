@@ -22,11 +22,16 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.univent.kafka.ReviewEventProducer;
+import com.univent.kafka.NotificationEventProducer;
+import com.univent.kafka.AuditEventProducer;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -45,6 +50,9 @@ public class ReviewService {
     private final UserRepository userRepository;
     private final CollegeProgramRepository collegeProgramRepository;
     private final ReviewVoteRepository reviewVoteRepository;
+    private final ReviewEventProducer reviewEventProducer;
+    private final NotificationEventProducer notificationEventProducer;
+    private final AuditEventProducer auditEventProducer;
 
     @Transactional
     public ReviewResponse submitReview(User user, ReviewSubmitRequest request) {
@@ -82,6 +90,18 @@ public class ReviewService {
         // Update user's total reviews count
         user.setTotalReviews(user.getTotalReviews() + 1);
         userRepository.save(user);
+
+        // Publish to Kafka for Python AI processing
+        reviewEventProducer.publishReviewSubmitted(
+                saved.getId(), college.getId(), program.getId(),
+                saved.getReviewText(), saved.getPros(), saved.getCons(),
+                user.getId(), user.getVerifiedBadge(),
+                saved.getGraduationYear(), saved.getOverallRating());
+
+        // Audit log
+        auditEventProducer.publishAuditEvent(
+                user.getId(), user.getRole().name(), "REVIEW_SUBMITTED",
+                "REVIEW", saved.getId(), Map.of("college_id", college.getId().toString()));
 
         log.info("Review submitted: {} by user: {}", saved.getId(), user.getAnonymousUsername());
         return mapToResponse(saved);

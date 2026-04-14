@@ -28,13 +28,25 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/univent
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=univent_dev_pass
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-      - JWT_SECRET=${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      - DB_URL=jdbc:postgresql://postgres:5432/univent
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BROKERS=kafka:29092
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ACCESS_EXPIRATION=900000
+      - JWT_REFRESH_EXPIRATION=604800000
       - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD}
+      - MINIO_BUCKET=univent-id-cards
+      - ENCRYPTION_SECRET=${JWT_SECRET}
+      - MAIL_HOST=smtp.gmail.com
+      - MAIL_PORT=587
+      - MAIL_USERNAME=
+      - MAIL_PASSWORD=
+      - SERVER_PORT=8080
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,12 +65,13 @@ services:
       - "9090:9090"
     environment:
       - PORT=9090
-      - POSTGRES_URL=postgres://postgres:univent_dev_pass@postgres:5432/univent?sslmode=disable
+      - POSTGRES_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/univent?sslmode=disable
       - REDIS_URL=redis://redis:6379/0
       - KAFKA_BROKERS=kafka:29092
-      - JWT_SECRET=${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      - JWT_SECRET=${JWT_SECRET}
       - SPRING_BOOT_URL=http://spring-boot:8080
       - PYTHON_AI_URL=http://python-ai:8000
+      - ENVIRONMENT=docker
     depends_on:
       postgres:
         condition: service_healthy
@@ -78,7 +91,7 @@ services:
     environment:
       - HOST=0.0.0.0
       - PORT=8000
-      - POSTGRES_URL=postgresql://postgres:univent_dev_pass@postgres:5432/univent
+      - POSTGRES_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/univent
       - KAFKA_BROKERS=kafka:29092
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
@@ -103,7 +116,7 @@ services:
     environment:
       POSTGRES_DB: univent
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: univent_dev_pass
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -176,8 +189,8 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
@@ -185,7 +198,7 @@ services:
       - univent-net
 
   # ============================================
-  # MONITORING (Optional - comment out to save resources)
+  # MONITORING (Optional - start with: docker compose --profile monitoring up)
   # ============================================
   prometheus:
     image: prom/prometheus:latest
@@ -203,7 +216,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
     volumes:
       - grafana_data:/var/lib/grafana
     networks:

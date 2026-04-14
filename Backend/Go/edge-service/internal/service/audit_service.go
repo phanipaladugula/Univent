@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -60,51 +62,54 @@ func (as *AuditService) GetAuditLogs(ctx context.Context, action, resourceType s
 
 	offset := (page - 1) * pageSize
 
-	query := `
-		SELECT id, timestamp, actor_id, actor_role, actor_ip, actor_fingerprint,
-		       action, resource_type, resource_id, metadata, created_at
-		FROM audit_logs
-		WHERE 1=1
-	`
+	// Build query dynamically with parameterized args
+	baseWhere := "WHERE 1=1"
 	args := []interface{}{}
 	argIdx := 1
 
 	if action != "" {
-		query += ` AND action = $` + itoa(argIdx)
+		baseWhere += " AND action = $" + strconv.Itoa(argIdx)
 		args = append(args, action)
 		argIdx++
 	}
 
 	if resourceType != "" {
-		query += ` AND resource_type = $` + itoa(argIdx)
+		baseWhere += " AND resource_type = $" + strconv.Itoa(argIdx)
 		args = append(args, resourceType)
 		argIdx++
 	}
 
 	if from != nil {
-		query += ` AND timestamp >= $` + itoa(argIdx)
+		baseWhere += " AND timestamp >= $" + strconv.Itoa(argIdx)
 		args = append(args, *from)
 		argIdx++
 	}
 
 	if to != nil {
-		query += ` AND timestamp <= $` + itoa(argIdx)
+		baseWhere += " AND timestamp <= $" + strconv.Itoa(argIdx)
 		args = append(args, *to)
 		argIdx++
 	}
 
-	// Count total
-	countQuery := `SELECT COUNT(*) FROM audit_logs WHERE 1=1`
-	// Reuse the same filters for count
+	// Count total with the SAME filters
+	countQuery := "SELECT COUNT(*) FROM audit_logs " + baseWhere
 	var total int
-	as.pg.Pool.QueryRow(ctx, countQuery).Scan(&total) // simplified, in production build full count query
-
-	query += ` ORDER BY timestamp DESC LIMIT $` + itoa(argIdx) + ` OFFSET $` + itoa(argIdx+1)
-	args = append(args, pageSize, offset)
-
-	rows, err := as.pg.Pool.Query(ctx, query, args...)
+	err := as.pg.Pool.QueryRow(ctx, countQuery, args...).Scan(&total)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("count audit logs: %w", err)
+	}
+
+	// Data query with pagination
+	dataQuery := `
+		SELECT id, timestamp, actor_id, actor_role, actor_ip, actor_fingerprint,
+		       action, resource_type, resource_id, metadata, created_at
+		FROM audit_logs ` + baseWhere +
+		" ORDER BY timestamp DESC LIMIT $" + strconv.Itoa(argIdx) + " OFFSET $" + strconv.Itoa(argIdx+1)
+	dataArgs := append(args, pageSize, offset)
+
+	rows, err := as.pg.Pool.Query(ctx, dataQuery, dataArgs...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("query audit logs: %w", err)
 	}
 	defer rows.Close()
 
@@ -115,6 +120,7 @@ func (as *AuditService) GetAuditLogs(ctx context.Context, action, resourceType s
 		err := rows.Scan(&al.ID, &al.Timestamp, &al.ActorID, &al.ActorRole, &al.ActorIP,
 			&al.ActorFingerprint, &al.Action, &al.ResourceType, &al.ResourceID, &metadataJSON, &al.CreatedAt)
 		if err != nil {
+			log.Printf("⚠️ Scan audit log row: %v", err)
 			continue
 		}
 		if metadataJSON != nil {
@@ -124,8 +130,4 @@ func (as *AuditService) GetAuditLogs(ctx context.Context, action, resourceType s
 	}
 
 	return logs, total, nil
-}
-
-func itoa(i int) string {
-	return string(rune('0'+i)) // Works for single digits; for production use strconv
 }

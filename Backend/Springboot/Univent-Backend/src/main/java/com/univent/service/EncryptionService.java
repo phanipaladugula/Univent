@@ -24,7 +24,7 @@ public class EncryptionService {
     private static final int KEY_LENGTH = 256;
     private static final int ITERATION_COUNT = 65536;
 
-    @Value("${encryption.secret:UniventSecretKey2025!@#}")
+    @Value("${encryption.secret}")
     private String secretKey;
 
     // Returns Base64 encoded String (for storage)

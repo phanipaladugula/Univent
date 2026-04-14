@@ -8,22 +8,23 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
 
-    # Gemini API
-    GEMINI_API_KEY: str = ""
+    # Gemini API (REQUIRED — will fail at startup if missing)
+    GEMINI_API_KEY: str
     GEMINI_FLASH_MODEL: str = "gemini-2.0-flash"
     GEMINI_PRO_MODEL: str = "gemini-2.5-pro-preview-05-06"
     GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
 
-    # PostgreSQL
-    POSTGRES_URL: str = "postgresql://postgres:univent_dev_pass@localhost:5432/univent"
+    # PostgreSQL (REQUIRED)
+    POSTGRES_URL: str
 
     # Qdrant Vector DB
-    QDRANT_HOST: str = "localhost"
+    QDRANT_HOST: str = "qdrant"
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION: str = "univent_reviews"
 
-    # Kafka
-    KAFKA_BROKERS: str = "localhost:9092"
+    # Kafka (REQUIRED)
+    KAFKA_BROKERS: str
+
     KAFKA_GROUP_ID: str = "ai-worker-group"
 
     # Processing

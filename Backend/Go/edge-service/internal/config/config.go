@@ -1,33 +1,53 @@
 package config
 
 import (
+	"log"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	Port            string
-	PostgresURL     string
-	RedisURL        string
-	KafkaBrokers    []string
-	JWTSecret       string
-	SpringBootURL   string
-	PythonAIURL     string
-	Environment     string
+	Port          string
+	PostgresURL   string
+	RedisURL      string
+	KafkaBrokers  []string
+	JWTSecret     string
+	SpringBootURL string
+	PythonAIURL   string
+	Environment   string
 }
 
 func Load() *Config {
-	return &Config{
+	// Load .env file if present (for local dev — ignored in Docker)
+	if err := godotenv.Load(); err != nil {
+		log.Println("ℹ️  No .env file found, using environment variables")
+	}
+
+	cfg := &Config{
 		Port:          getEnv("PORT", "9090"),
-		PostgresURL:   getEnv("POSTGRES_URL", "postgres://postgres:univent_dev_pass@localhost:5432/univent?sslmode=disable"),
-		RedisURL:      getEnv("REDIS_URL", "redis://localhost:6379/0"),
-		KafkaBrokers:  strings.Split(getEnv("KAFKA_BROKERS", "localhost:9092"), ","),
-		JWTSecret:     getEnv("JWT_SECRET", "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"),
-		SpringBootURL: getEnv("SPRING_BOOT_URL", "http://localhost:8080"),
-		PythonAIURL:   getEnv("PYTHON_AI_URL", "http://localhost:8000"),
+		PostgresURL:   requireEnv("POSTGRES_URL"),
+		RedisURL:      requireEnv("REDIS_URL"),
+		KafkaBrokers:  strings.Split(requireEnv("KAFKA_BROKERS"), ","),
+		JWTSecret:     requireEnv("JWT_SECRET"),
+		SpringBootURL: getEnv("SPRING_BOOT_URL", "http://spring-boot:8080"),
+		PythonAIURL:   getEnv("PYTHON_AI_URL", "http://python-ai:8000"),
 		Environment:   getEnv("ENVIRONMENT", "development"),
 	}
+
+	log.Printf("✅ Config loaded (env=%s, port=%s, kafka=%v)", cfg.Environment, cfg.Port, cfg.KafkaBrokers)
+	return cfg
+}
+
+// requireEnv reads a mandatory env var and panics if missing
+func requireEnv(key string) string {
+	val := os.Getenv(key)
+	if val == "" {
+		log.Fatalf("❌ Required environment variable %s is not set", key)
+	}
+	return val
 }
 
 func getEnv(key, fallback string) string {
