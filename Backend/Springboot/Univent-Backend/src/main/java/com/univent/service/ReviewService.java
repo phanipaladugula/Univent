@@ -52,6 +52,8 @@ public class ReviewService {
     private final ReviewVoteRepository reviewVoteRepository;
     private final ReviewEventProducer reviewEventProducer;
     private final NotificationEventProducer notificationEventProducer;
+    private final MeterRegistry meterRegistry;
+    private final TrustScoreService trustScoreService;
     private final AuditEventProducer auditEventProducer;
 
     @Transactional
@@ -104,6 +106,7 @@ public class ReviewService {
                 "REVIEW", saved.getId(), Map.of("college_id", college.getId().toString()));
 
         log.info("Review submitted: {} by user: {}", saved.getId(), user.getAnonymousUsername());
+        meterRegistry.counter("univent.reviews.submitted").increment();
         return mapToResponse(saved);
     }
 
@@ -274,6 +277,7 @@ public class ReviewService {
         updateCollegeStats(review.getCollege().getId());
 
         log.info("Review {} approved by admin {}", reviewId, admin.getAnonymousUsername());
+        meterRegistry.counter("univent.reviews.approved").increment();
         return mapToResponse(review);
     }
     @Transactional

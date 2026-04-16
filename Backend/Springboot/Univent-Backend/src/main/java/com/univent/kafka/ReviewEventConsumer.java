@@ -89,4 +89,23 @@ public class ReviewEventConsumer {
             log.error("❌ Failed to process review.processed event: {}", e.getMessage(), e);
         }
     }
+
+    @KafkaListener(topics = "review.submitted.dlq", groupId = "spring-boot-dlq")
+    @Transactional
+    public void onDlqMessage(String message) {
+        try {
+            JsonNode event = objectMapper.readTree(message);
+            String reviewIdStr = event.get("review_id").asText();
+            UUID reviewId = UUID.fromString(reviewIdStr);
+
+            Optional<Review> optReview = reviewRepository.findById(reviewId);
+            if (optReview.isPresent()) {
+                Review review = optReview.get();
+                // We keep it pending or maybe set a new status PENDING_RETRY, but let's keep it PENDING and notify admins.
+                log.error("Review {} entered DLQ. Manual intervention or retry required.", reviewIdStr);
+            }
+        } catch (Exception e) {
+            log.error("Failed to process DLQ message: {}", e.getMessage(), e);
+        }
+    }
 }

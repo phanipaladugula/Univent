@@ -4,7 +4,9 @@ import com.univent.model.dto.response.ReviewResponse;
 import com.univent.model.entity.User;
 import com.univent.model.enums.ReviewStatus;
 import com.univent.repository.UserRepository;
+import com.univent.repository.ReviewRepository;
 import com.univent.service.ReviewService;
+import com.univent.kafka.ReviewEventProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -26,6 +28,8 @@ public class AdminReviewController {
 
     private final ReviewService reviewService;
     private final UserRepository userRepository;
+    private final ReviewRepository reviewRepository;
+    private final ReviewEventProducer reviewEventProducer;
 
     @GetMapping("/pending")
     public ResponseEntity<Page<ReviewResponse>> getPendingReviews(Pageable pageable) {
@@ -68,5 +72,18 @@ public class AdminReviewController {
         return ResponseEntity.ok().build();
     }
 
-
+    @PostMapping("/{reviewId}/reprocess")
+    public ResponseEntity<String> reprocessReview(@PathVariable UUID reviewId) {
+        log.info("Admin requesting reprocess for review: {}", reviewId);
+        com.univent.model.entity.Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new RuntimeException("Review not found"));
+        
+        reviewEventProducer.publishReviewSubmitted(
+                review.getId(), review.getCollege().getId(), review.getProgram().getId(),
+                review.getReviewText(), review.getPros(), review.getCons(),
+                review.getUser().getId(), review.getUser().getVerifiedBadge(),
+                review.getGraduationYear(), review.getOverallRating());
+                
+        return ResponseEntity.ok("Review " + reviewId + " re-published for processing.");
+    }
 }

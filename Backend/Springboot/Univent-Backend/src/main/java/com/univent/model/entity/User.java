@@ -33,6 +33,9 @@ public class User extends BaseEntity {
     @Column
     private Integer reputation = 0;
 
+    @Column(name = "trust_score", nullable = false)
+    private Integer trustScore = 0;
+
     @Column(name = "total_reviews")
     private Integer totalReviews = 0;
 
@@ -82,6 +85,9 @@ public class User extends BaseEntity {
 
     public Integer getReputation() { return reputation; }
     public void setReputation(Integer reputation) { this.reputation = reputation; }
+
+    public Integer getTrustScore() { return trustScore; }
+    public void setTrustScore(Integer trustScore) { this.trustScore = trustScore; }
 
     public Integer getTotalReviews() { return totalReviews; }
     public void setTotalReviews(Integer totalReviews) { this.totalReviews = totalReviews; }

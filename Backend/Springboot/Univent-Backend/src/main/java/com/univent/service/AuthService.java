@@ -9,10 +9,14 @@ import com.univent.model.enums.Role;
 import com.univent.model.enums.VerificationStatus;
 import com.univent.repository.UserRepository;
 import com.univent.security.JwtTokenProvider;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -28,6 +32,8 @@ public class AuthService {
     private final OtpService otpService;
     private final EmailService emailService;
     private final JwtTokenProvider tokenProvider;
+    private final RateLimitService rateLimitService;
+    private final MeterRegistry meterRegistry;
 
     @Value("${app.email.salt.pepper:UniventSecretPepper2025}")
     private String pepper;
@@ -37,6 +43,15 @@ public class AuthService {
 
     @Transactional
     public void sendRegistrationOtp(RegisterRequest request) {
+        HttpServletRequest httpRequest = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
+        String fingerprint = httpRequest.getHeader("X-Device-Fingerprint");
+        
+        if (fingerprint != null && !fingerprint.isEmpty()) {
+            if (rateLimitService.isRateLimited("fingerprint:" + fingerprint, 5, 3600)) {
+                throw new RuntimeException("Too many requests from this device. Please try again later.");
+            }
+        }
+
         String emailHash = hashEmailWithSalt(request.getEmail());
 
         if (!userRepository.existsByEmailHash(emailHash)) {
@@ -50,6 +65,7 @@ public class AuthService {
             user.setReputation(0);
             user.setTotalReviews(0);
             userRepository.save(user);
+            meterRegistry.counter("univent.users.registered").increment();
         }
 
         String otp = otpService.generateAndStoreOtp(request.getEmail());

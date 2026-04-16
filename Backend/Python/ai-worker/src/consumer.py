@@ -73,10 +73,23 @@ class ReviewConsumer:
                     continue
 
                 try:
-                    self._process_message(msg)
+                    max_retries = 3
+                    for attempt in range(max_retries):
+                        try:
+                            self._process_message(msg)
+                            break
+                        except Exception as e:
+                            if attempt == max_retries - 1:
+                                logger.error("❌ Failed to process review after %d attempts: %s", max_retries, e, exc_info=True)
+                                self.producer.produce("review.submitted.dlq", key=msg.key(), value=msg.value())
+                                self.producer.flush()
+                            else:
+                                wait_time = 2 ** attempt
+                                logger.warning("⚠️ Retrying processing of review in %ds (attempt %d): %s", wait_time, attempt+1, e)
+                                time.sleep(wait_time)
                     consumer.commit(message=msg)
                 except Exception as e:
-                    logger.error("❌ Failed to process review: %s", e, exc_info=True)
+                    logger.error("❌ Fatal error processing message: %s", e, exc_info=True)
 
         except KafkaException as e:
             logger.error("Kafka exception: %s", e)

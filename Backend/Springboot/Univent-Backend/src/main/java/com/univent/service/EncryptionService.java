@@ -1,7 +1,8 @@
 package com.univent.service;
 
+import com.univent.config.SecretProvider;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Cipher;
@@ -14,6 +15,7 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 @Service
+@RequiredArgsConstructor
 @Slf4j
 public class EncryptionService {
 
@@ -24,8 +26,7 @@ public class EncryptionService {
     private static final int KEY_LENGTH = 256;
     private static final int ITERATION_COUNT = 65536;
 
-    @Value("${encryption.secret}")
-    private String secretKey;
+    private final SecretProvider secretProvider;
 
     // Returns Base64 encoded String (for storage)
     public String encrypt(byte[] data) {
@@ -33,7 +34,7 @@ public class EncryptionService {
             byte[] salt = generateSalt();
             byte[] iv = generateIV();
 
-            SecretKey key = deriveKey(secretKey, salt);
+            SecretKey key = deriveKey(secretProvider.getEncryptionSecret(), salt);
             Cipher cipher = Cipher.getInstance(ALGORITHM);
             GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
             cipher.init(Cipher.ENCRYPT_MODE, key, spec);
@@ -59,7 +60,7 @@ public class EncryptionService {
             byte[] salt = generateSalt();
             byte[] iv = generateIV();
 
-            SecretKey key = deriveKey(secretKey, salt);
+            SecretKey key = deriveKey(secretProvider.getEncryptionSecret(), salt);
             Cipher cipher = Cipher.getInstance(ALGORITHM);
             GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
             cipher.init(Cipher.ENCRYPT_MODE, key, spec);
@@ -92,7 +93,7 @@ public class EncryptionService {
             System.arraycopy(data, SALT_LENGTH, iv, 0, GCM_IV_LENGTH);
             System.arraycopy(data, SALT_LENGTH + GCM_IV_LENGTH, encrypted, 0, encrypted.length);
 
-            SecretKey key = deriveKey(secretKey, salt);
+            SecretKey key = deriveKey(secretProvider.getEncryptionSecret(), salt);
             Cipher cipher = Cipher.getInstance(ALGORITHM);
             GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
             cipher.init(Cipher.DECRYPT_MODE, key, spec);

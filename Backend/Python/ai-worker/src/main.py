@@ -17,6 +17,7 @@ from src.models.schemas import (
     ChatRequest,
     ChatResponse,
     Citation,
+    FeedbackRequest,
     SuggestRequest,
     SuggestResponse,
     SummarizeRequest,
@@ -35,6 +36,7 @@ logger = logging.getLogger(__name__)
 CHAT_REQUESTS = Counter("ai_chat_requests_total", "Total AI chat requests")
 CHAT_LATENCY = Histogram("ai_chat_duration_seconds", "AI chat response latency")
 REVIEWS_PROCESSED = Counter("ai_reviews_processed_total", "Total reviews processed")
+FEEDBACK_COUNT = Counter("ai_feedback_total", "Total AI chat feedback received")
 
 gemini_service: GeminiService = None
 rag_service: RAGService = None
@@ -210,6 +212,14 @@ async def ai_chat(request: ChatRequest):
     except Exception as exc:
         logger.error("AI chat error: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=f"AI processing failed: {exc}") from exc
+
+
+@app.post("/api/v1/ai/chat/feedback")
+async def ai_chat_feedback(request: FeedbackRequest):
+    """Receive feedback for AI chat responses."""
+    FEEDBACK_COUNT.inc()
+    logger.info("Feedback received for conversation %s: rating=%d", request.conversation_id, request.rating)
+    return {"status": "success"}
 
 
 @app.post("/api/v1/ai/summarize", response_model=SummarizeResponse)

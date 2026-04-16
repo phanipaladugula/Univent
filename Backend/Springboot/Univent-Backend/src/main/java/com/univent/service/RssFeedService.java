@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.time.LocalDateTime;
@@ -24,7 +25,7 @@ public class RssFeedService {
 
     private final NewsArticleRepository newsArticleRepository;
     private final CollegeRepository collegeRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     // RSS Feed sources
     private static final List<RssSource> RSS_SOURCES = List.of(
@@ -42,6 +43,7 @@ public class RssFeedService {
     public int fetchAndStoreNews() {
         log.info("Starting RSS feed fetch");
         int newArticlesCount = 0;
+        int sourceErrors = 0;
 
         for (RssSource source : RSS_SOURCES) {
             try {
@@ -49,21 +51,31 @@ public class RssFeedService {
                 List<NewsArticle> articles = parseRssFeed(rssXml, source);
 
                 for (NewsArticle article : articles) {
-                    if (!newsArticleRepository.findByArticleUrl(article.getArticleUrl()).isPresent()) {
+                    // Normalize URL to remove tracking parameters
+                    String cleanUrl = UriComponentsBuilder.fromHttpUrl(article.getArticleUrl())
+                            .replaceQueryParam("utm_source")
+                            .replaceQueryParam("utm_medium")
+                            .replaceQueryParam("utm_campaign")
+                            .build()
+                            .toUriString();
+                            
+                    if (!newsArticleRepository.findByArticleUrl(cleanUrl).isPresent()) {
+                        article.setArticleUrl(cleanUrl);
                         // Try to match with a college
                         matchCollegeToArticle(article);
 
                         newsArticleRepository.save(article);
                         newArticlesCount++;
-                        log.info("Saved new article: {}", article.getTitle());
+                        log.debug("Saved new article: {}", article.getTitle());
                     }
                 }
             } catch (Exception e) {
+                sourceErrors++;
                 log.error("Failed to fetch RSS from {}: {}", source.name, e.getMessage());
             }
         }
 
-        log.info("RSS fetch completed. New articles: {}", newArticlesCount);
+        log.info("RSS fetch completed. New articles: {}, Source errors: {}", newArticlesCount, sourceErrors);
         return newArticlesCount;
     }
 

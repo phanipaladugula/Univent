@@ -70,6 +70,12 @@ class ChatMetadata(BaseModel):
 
 # ─── Summarize ───────────────────────────────────────
 
+class FeedbackRequest(BaseModel):
+    conversation_id: str
+    message_id: str
+    rating: int = Field(..., ge=1, le=5)
+    feedback_text: Optional[str] = None
+
 class SummarizeRequest(BaseModel):
     college_id: str
     program_id: Optional[str] = None

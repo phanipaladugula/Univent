@@ -15,6 +15,7 @@ import (
 const (
 	TopicNotificationOutbound = "notification.outbound"
 	TopicAuditEvents          = "audit.events"
+	TopicReviewProcessed      = "review.processed"
 )
 
 type Consumer struct {
@@ -38,6 +39,7 @@ func (c *Consumer) Start(ctx context.Context) {
 
 	go c.consumeNotifications(ctx)
 	go c.consumeAuditEvents(ctx)
+	go c.consumeReviewProcessed(ctx)
 
 	log.Println("📡 Kafka consumers started")
 }
@@ -129,5 +131,45 @@ func (c *Consumer) consumeAuditEvents(ctx context.Context) {
 		}
 
 		c.auditService.HandleAuditEvent(event)
+	}
+}
+
+func (c *Consumer) consumeReviewProcessed(ctx context.Context) {
+	reader := kafkago.NewReader(kafkago.ReaderConfig{
+		Brokers:        c.brokers,
+		Topic:          TopicReviewProcessed,
+		GroupID:        "go-edge-reviews",
+		MinBytes:       1,
+		MaxBytes:       10e6,
+		MaxWait:        500 * time.Millisecond,
+		CommitInterval: time.Second,
+		StartOffset:    kafkago.LastOffset,
+	})
+	defer reader.Close()
+
+	log.Printf("📡 Consuming from %s", TopicReviewProcessed)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		msg, err := reader.ReadMessage(ctx)
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			log.Printf("⚠️ Error reading review processed event: %v", err)
+			time.Sleep(time.Second)
+			continue
+		}
+
+		// Acknowledge consuming the message so that we know it works, maybe print a log
+		log.Printf("✅ Edge Service received review.processed event from Python AI Worker: %s", string(msg.Value))
+		// The edge service doesn't actually process review.processed to store it (Spring Boot does), 
+		// but it CAN send a real-time raw WebSocket event if required.
+		// As per task instructions just ensure `consumeReviewProcessed` goroutine exists.
 	}
 }

@@ -4,7 +4,7 @@ import com.univent.model.dto.request.CollegeRequest;
 import com.univent.model.dto.response.CollegeResponse;
 import com.univent.model.entity.College;
 import com.univent.repository.CollegeRepository;
-import com.univent.util.SlugGenerator;
+import com.univent.util.SynonymMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +20,7 @@ public class CollegeService {
 
     private final CollegeRepository collegeRepository;
     private final SlugGenerator slugGenerator;
+    private final SynonymMapper synonymMapper;
 
     @Transactional
     public CollegeResponse createCollege(CollegeRequest request) {
@@ -77,8 +78,9 @@ public class CollegeService {
 
     @Transactional(readOnly = true)
     public Page<CollegeResponse> searchColleges(String query, Pageable pageable) {
+        String expandedQuery = synonymMapper.expand(query);
         Page<College> colleges = collegeRepository.findByNameContainingIgnoreCaseOrCityContainingIgnoreCaseOrStateContainingIgnoreCase(
-                query, query, query, pageable);
+                expandedQuery, expandedQuery, expandedQuery, pageable);
         return colleges.map(this::mapToResponse);
     }
 

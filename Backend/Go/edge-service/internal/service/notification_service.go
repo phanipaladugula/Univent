@@ -6,6 +6,10 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -13,6 +17,11 @@ import (
 	"github.com/univent/edge-service/internal/model"
 	"github.com/univent/edge-service/internal/store"
 )
+
+var wsMissedDeliveriesTotal = promauto.NewCounter(prometheus.CounterOpts{
+	Name: "ws_missed_deliveries_total",
+	Help: "Total number of websocket notification deliveries missed due to full buffer",
+})
 
 // NotificationService manages WebSocket connections and routes notifications
 type NotificationService struct {
@@ -98,6 +107,7 @@ func (ns *NotificationService) SendToUser(userID uuid.UUID, notification model.N
 			return nil
 		default:
 			// Channel full, user will see it when they poll
+			wsMissedDeliveriesTotal.Inc()
 			log.Printf("⚠️ Send buffer full for user %s, notification persisted for later", userID)
 			return nil
 		}
@@ -203,15 +213,30 @@ func (ns *NotificationService) persistNotification(n model.Notification) error {
 }
 
 func (ns *NotificationService) writePump(client *clientConn) {
+	ticker := time.NewTicker(54 * time.Second)
 	defer func() {
+		ticker.Stop()
 		client.conn.Close()
 	}()
 
-	for msg := range client.send {
-		if err := client.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
-			log.Printf("⚠️ WebSocket write error for user %s: %v", client.userID, err)
-			ns.UnregisterClient(client.userID)
-			return
+	for {
+		select {
+		case msg, ok := <-client.send:
+			if !ok {
+				client.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+			if err := client.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+				log.Printf("⚠️ WebSocket write error for user %s: %v", client.userID, err)
+				ns.UnregisterClient(client.userID)
+				return
+			}
+		case <-ticker.C:
+			if err := client.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				log.Printf("⚠️ WebSocket ping error for user %s: %v", client.userID, err)
+				ns.UnregisterClient(client.userID)
+				return
+			}
 		}
 	}
 }
