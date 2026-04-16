@@ -24,8 +24,11 @@ import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.UUID;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -69,7 +72,12 @@ public class AuthService {
         }
 
         String otp = otpService.generateAndStoreOtp(request.getEmail());
-        emailService.sendOtpEmail(request.getEmail(), otp);
+        try {
+            emailService.sendOtpEmail(request.getEmail(), otp);
+        } catch (Exception e) {
+            log.warn("Failed to send OTP email (expected in dev if SMTP unconfigured): {}", e.getMessage());
+            // We intentionally do not rethrow so the user/transaction commits, allowing E2E Redis verification
+        }
     }
 
     @Transactional

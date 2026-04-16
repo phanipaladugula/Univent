@@ -22,7 +22,7 @@ public class AiChatService {
 
     private final RestTemplate restTemplate;
 
-    @Value("${ai.worker.base-url:http://localhost:8000}")
+    @Value("${ai.worker.url:http://localhost:8000}")
     private String aiWorkerBaseUrl;
 
     public AiChatResponse chat(AiChatRequest request) {
