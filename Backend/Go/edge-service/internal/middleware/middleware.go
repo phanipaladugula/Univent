@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -208,9 +209,10 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(wrapped, r)
 
-		log.Printf("[%s] %s %s %d %s",
+		requestID := chimw.GetReqID(r.Context())
+		log.Printf("method=%s path=%s client_ip=%s status=%d duration=%s request_id=%s",
 			r.Method, r.URL.Path, getClientIP(r),
-			wrapped.statusCode, time.Since(start))
+			wrapped.statusCode, time.Since(start), requestID)
 	})
 }
 

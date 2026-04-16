@@ -236,6 +236,12 @@ public class ReviewService {
         return reviewRepository.findByStatus(status, pageable).map(this::mapToResponse);
     }
 
+    @Transactional(readOnly = true)
+    public Page<ReviewResponse> getReviewsByUser(UUID userId, ReviewStatus status, Pageable pageable) {
+        return reviewRepository.findByUserIdAndStatus(userId, status, pageable)
+                .map(this::mapToResponse);
+    }
+
     // Add this method to ReviewService.java for async refresh
 
 

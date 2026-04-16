@@ -8,8 +8,6 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.function.Function;
 
@@ -30,45 +28,34 @@ public class JwtTokenProvider {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    // For initial login - accepts email and hashes it
-    public String generateAccessToken(UUID userId, String email, String role) {
+    public String generateAccessToken(UUID userId, String emailHash, String role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId.toString());
-        claims.put("emailHash", hashEmail(email));
+        claims.put("emailHash", emailHash);
         claims.put("role", role);
         claims.put("type", "access");
-        return createToken(claims, accessTokenExpiration);
+        return createToken(userId, claims, accessTokenExpiration);
     }
 
-    // For refresh token - accepts already hashed email
     public String generateAccessTokenFromHash(UUID userId, String emailHash, String role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId.toString());
         claims.put("emailHash", emailHash);
         claims.put("role", role);
         claims.put("type", "access");
-        return createToken(claims, accessTokenExpiration);
-    }
-
-    private String hashEmail(String email) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(email.toLowerCase().trim().getBytes());
-            return HexFormat.of().formatHex(hash);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Error hashing email", e);
-        }
+        return createToken(userId, claims, accessTokenExpiration);
     }
 
     public String generateRefreshToken(UUID userId) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId.toString());
         claims.put("type", "refresh");
-        return createToken(claims, refreshTokenExpiration);
+        return createToken(userId, claims, refreshTokenExpiration);
     }
 
-    private String createToken(Map<String, Object> claims, Long expiration) {
+    private String createToken(UUID userId, Map<String, Object> claims, Long expiration) {
         return Jwts.builder()
+                .subject(userId.toString())
                 .claims(claims)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiration))

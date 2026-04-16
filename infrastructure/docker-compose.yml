@@ -46,6 +46,7 @@ services:
       - MAIL_USERNAME=
       - MAIL_PASSWORD=
       - SERVER_PORT=8080
+      - AI_WORKER_URL=http://python-ai:8000
     depends_on:
       postgres:
         condition: service_healthy
@@ -210,6 +211,33 @@ services:
     profiles:
       - monitoring
 
+  loki:
+    image: grafana/loki:3.0.0
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    networks:
+      - univent-net
+    profiles:
+      - monitoring
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    command: -config.file=/etc/promtail/promtail-config.yml
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    depends_on:
+      - loki
+    networks:
+      - univent-net
+    profiles:
+      - monitoring
+
   grafana:
     image: grafana/grafana:latest
     ports:
@@ -220,6 +248,9 @@ services:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+      - loki
     networks:
       - univent-net
     profiles:
@@ -232,6 +263,7 @@ volumes:
   qdrant_data:
   minio_data:
   grafana_data:
+  loki_data:
 
 networks:
   univent-net:

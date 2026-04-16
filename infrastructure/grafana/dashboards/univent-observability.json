@@ -1,0 +1,52 @@
+{
+  "title": "Univent Observability",
+  "timezone": "browser",
+  "refresh": "10s",
+  "schemaVersion": 36,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Spring Boot Availability",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "up{job=\"spring-boot\"}",
+          "legendFormat": "spring-boot"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "AI Chat Throughput",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(ai_chat_requests_total[5m]))",
+          "legendFormat": "requests/sec"
+        }
+      ]
+    },
+    {
+      "type": "logs",
+      "title": "Application Logs",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "expr": "{compose_service=~\"spring-boot|go-edge|python-ai|nginx\"}"
+        }
+      ]
+    }
+  ]
+}

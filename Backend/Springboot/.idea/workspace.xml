@@ -6,18 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="09ebec84-1c9e-4700-93fe-90a8a5adcdad" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/BackendApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/BackendApplication.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/config/DotenvConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/config/DotenvConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/config/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/exception/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/exception/GlobalExceptionHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/repository/CollegeRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/repository/CollegeRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/repository/ProgramRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/repository/ProgramRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/AuthService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/AuthService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/CollegeService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/CollegeService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/ProgramService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/ProgramService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/ReviewService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/java/com/univent/service/ReviewService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Univent-Backend/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/Univent-Backend/src/main/resources/application.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

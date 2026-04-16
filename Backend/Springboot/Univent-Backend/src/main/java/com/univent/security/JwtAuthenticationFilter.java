@@ -34,9 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String tokenType = tokenProvider.getTokenType(jwt);
                 // Only validate access tokens, not refresh tokens
                 if ("access".equals(tokenType)) {
-                    // CHANGE THIS LINE - use getEmailHashFromToken instead of getEmailFromToken
                     String emailHash = tokenProvider.getEmailHashFromToken(jwt);
-                    System.out.println("Email hash from token: " + emailHash);
 
                     UserDetails userDetails = userDetailsService.loadUserByUsername(emailHash);
 
@@ -45,7 +43,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-                    System.out.println("Authentication successful for user: " + emailHash);
                 }
             }
         } catch (Exception ex) {

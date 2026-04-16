@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class MaterializedViewService {
 
+    private final RssFeedService rssFeedService;
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -66,7 +68,6 @@ public class MaterializedViewService {
     @Transactional
     public void fetchNewsAutomatically() {
         log.info("Scheduled news fetch started");
-         RssFeedService rssFeedService=null;
         rssFeedService.fetchAndStoreNews();
     }
 }

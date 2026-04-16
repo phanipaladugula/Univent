@@ -18,14 +18,20 @@ class Settings(BaseSettings):
     POSTGRES_URL: str
 
     # Qdrant Vector DB
+    QDRANT_URL: Optional[str] = None
     QDRANT_HOST: str = "qdrant"
     QDRANT_PORT: int = 6333
+    QDRANT_API_KEY: Optional[str] = None
     QDRANT_COLLECTION: str = "univent_reviews"
 
     # Kafka (REQUIRED)
     KAFKA_BROKERS: str
 
     KAFKA_GROUP_ID: str = "ai-worker-group"
+
+    # Connection safety
+    POSTGRES_CONNECT_TIMEOUT: int = 5
+    POSTGRES_STATEMENT_TIMEOUT_MS: int = 10000
 
     # Processing
     CHUNK_SIZE: int = 200  # tokens per chunk

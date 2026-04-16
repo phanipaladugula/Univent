@@ -126,6 +126,27 @@ public class VerificationService {
                 admin.getAnonymousUsername(), user.getAnonymousUsername(), reason);
     }
 
+    @Transactional
+    public void deleteIdCard(User user) {
+        if (user.getIdCardPath() == null) {
+            throw new RuntimeException("No ID card found for this user");
+        }
+
+        minioService.deleteFile(user.getIdCardPath());
+        user.setIdCardPath(null);
+        user.setIdCardUploadedAt(null);
+        user.setVerificationRequestedAt(null);
+        user.setVerificationReviewedBy(null);
+        user.setVerificationReviewedAt(null);
+        user.setVerificationRejectionReason(null);
+        user.setVerificationStatus(VerificationStatus.UNVERIFIED);
+        user.setVerifiedBadge(false);
+        userRepository.save(user);
+
+        logAudit(user, null, "DELETE", "User deleted stored ID card");
+        log.info("User {} deleted their ID card and reset verification", user.getAnonymousUsername());
+    }
+
     private void logAudit(User user, User admin, String action, String details) {
         VerificationAuditLog auditLog = new VerificationAuditLog();
         auditLog.setUser(user);

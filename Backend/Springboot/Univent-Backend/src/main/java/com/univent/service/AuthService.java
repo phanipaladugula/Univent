@@ -14,13 +14,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.Base64;
 import java.util.HexFormat;
 import java.util.UUID;
 
@@ -73,7 +69,7 @@ public class AuthService {
         user.setLastActiveAt(LocalDateTime.now());
         userRepository.save(user);
 
-        String accessToken = tokenProvider.generateAccessToken(user.getId(), request.getEmail(), user.getRole().name());
+        String accessToken = tokenProvider.generateAccessToken(user.getId(), user.getEmailHash(), user.getRole().name());
         String refreshToken = tokenProvider.generateRefreshToken(user.getId());
 
         return AuthResponse.builder()
@@ -138,17 +134,6 @@ public class AuthService {
             return HexFormat.of().formatHex(emailHash).substring(0, 16);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("Error generating salt", e);
-        }
-    }
-
-    // Backward compatibility method for existing hashes
-    private String hashEmail(String email) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(email.toLowerCase().trim().getBytes());
-            return HexFormat.of().formatHex(hash);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Error hashing email", e);
         }
     }
 

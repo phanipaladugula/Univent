@@ -9,14 +9,13 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 
 	"github.com/univent/edge-service/internal/middleware"
 	"github.com/univent/edge-service/internal/model"
 	"github.com/univent/edge-service/internal/service"
 )
-
-// ─── WebSocket Handler ───────────────────────────────
 
 type WebSocketHandler struct {
 	notifService *service.NotificationService
@@ -31,51 +30,43 @@ func NewWebSocketHandler(ns *service.NotificationService, jwt *middleware.JWTAut
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
-			CheckOrigin:     func(r *http.Request) bool { return true }, // Allow all origins in dev
+			CheckOrigin:     func(r *http.Request) bool { return true },
 		},
 	}
 }
 
 func (h *WebSocketHandler) Handle(w http.ResponseWriter, r *http.Request) {
-	// Extract token from query param (WebSocket can't send headers)
 	token := r.URL.Query().Get("token")
 	if token == "" {
 		http.Error(w, `{"error":"Missing token parameter"}`, http.StatusUnauthorized)
 		return
 	}
 
-	// Set it as header for JWT middleware to parse
-	r.Header.Set("Authorization", "Bearer "+token)
-
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("⚠️ WebSocket upgrade failed: %v", err)
+		log.Printf("websocket upgrade failed: %v", err)
 		return
 	}
 
-	// Parse JWT to get user ID
-	userID, ok := middleware.GetUserID(r.Context())
-	if !ok {
-		conn.WriteMessage(websocket.TextMessage, []byte(`{"error":"Invalid token"}`))
-		conn.Close()
+	claims, err := h.jwtAuth.ParseToken(token)
+	if err != nil {
+		_ = conn.WriteMessage(websocket.TextMessage, []byte(`{"error":"Invalid token"}`))
+		_ = conn.Close()
 		return
 	}
 
+	userID := claims.UserID
 	h.notifService.RegisterClient(userID, conn)
 
-	// Read pump (keeps connection alive, handles pings)
 	go func() {
 		defer h.notifService.UnregisterClient(userID)
 		for {
-			_, _, err := conn.ReadMessage()
-			if err != nil {
+			if _, _, err := conn.ReadMessage(); err != nil {
 				return
 			}
 		}
 	}()
 }
-
-// ─── Notification Handler ────────────────────────────
 
 type NotificationHandler struct {
 	notifService *service.NotificationService
@@ -177,8 +168,6 @@ func (h *NotificationHandler) GetUnreadCount(w http.ResponseWriter, r *http.Requ
 	})
 }
 
-// ─── Analytics Handler ───────────────────────────────
-
 type AnalyticsHandler struct {
 	analyticsService *service.AnalyticsService
 }
@@ -233,8 +222,6 @@ func (h *AnalyticsHandler) GetSentimentBreakdown(w http.ResponseWriter, r *http.
 	writeJSON(w, model.APIResponse{Success: true, Data: data})
 }
 
-// ─── Audit Handler ───────────────────────────────────
-
 type AuditHandler struct {
 	auditService *service.AuditService
 }
@@ -283,8 +270,6 @@ func (h *AuditHandler) GetAuditLogs(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ─── Health Handler ──────────────────────────────────
-
 type HealthHandler struct {
 	healthService *service.HealthService
 }
@@ -301,27 +286,20 @@ func (h *HealthHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(health)
+	_ = json.NewEncoder(w).Encode(health)
 }
-
-// ─── Helpers ─────────────────────────────────────────
 
 func writeJSON(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
+	_ = json.NewEncoder(w).Encode(data)
 }
 
 func writeError(w http.ResponseWriter, msg string, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(model.APIResponse{Success: false, Error: msg})
+	_ = json.NewEncoder(w).Encode(model.APIResponse{Success: false, Error: msg})
 }
 
-func parseUUID(s string) (interface{ String() string }, error) {
-	// Simple UUID parse helper
-	type uuidStr struct{ val string }
-	if len(s) != 36 {
-		return nil, http.ErrNotSupported
-	}
-	return &uuidStr{val: s}, nil
+func parseUUID(s string) (uuid.UUID, error) {
+	return uuid.Parse(s)
 }

@@ -12,8 +12,8 @@ class ReviewSubmittedEvent(BaseModel):
     college_id: str
     program_id: str
     review_text: str
-    pros: List[str] = []
-    cons: List[str] = []
+    pros: List[str] = Field(default_factory=list)
+    cons: List[str] = Field(default_factory=list)
     user_id: str
     is_verified: bool = False
     graduation_year: Optional[int] = None
@@ -33,7 +33,7 @@ class ReviewProcessedEvent(BaseModel):
 
 class ModerationResult(BaseModel):
     safe: bool = True
-    categories: List[str] = []
+    categories: List[str] = Field(default_factory=list)
     reason: Optional[str] = None
 
 
@@ -48,7 +48,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     response: str
-    citations: List["Citation"] = []
+    citations: List["Citation"] = Field(default_factory=list)
     metadata: "ChatMetadata"
 
 
@@ -64,7 +64,7 @@ class ChatMetadata(BaseModel):
     reviews_used: int = 0
     verified_count: int = 0
     confidence: str = "LOW"  # LOW, MEDIUM, HIGH
-    tools_called: List[str] = []
+    tools_called: List[str] = Field(default_factory=list)
     processing_time_ms: int = 0
 
 
@@ -77,8 +77,8 @@ class SummarizeRequest(BaseModel):
 
 class SummarizeResponse(BaseModel):
     summary: str
-    strengths: List[str] = []
-    weaknesses: List[str] = []
+    strengths: List[str] = Field(default_factory=list)
+    weaknesses: List[str] = Field(default_factory=list)
     reviews_analyzed: int = 0
 
 
@@ -92,7 +92,7 @@ class SuggestRequest(BaseModel):
 
 
 class SuggestResponse(BaseModel):
-    recommendations: List["CollegeRecommendation"] = []
+    recommendations: List["CollegeRecommendation"] = Field(default_factory=list)
     reasoning: str = ""
 
 
@@ -101,7 +101,7 @@ class CollegeRecommendation(BaseModel):
     college_name: str
     program_name: Optional[str] = None
     match_score: float = 0.0
-    highlights: List[str] = []
+    highlights: List[str] = Field(default_factory=list)
 
 
 # Forward references

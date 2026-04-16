@@ -138,7 +138,7 @@ func (fs *FingerprintService) IsSuspicious(ctx context.Context, fpHash string, c
 	err := fs.pg.Pool.QueryRow(ctx, `
 		SELECT COUNT(DISTINCT r.id)
 		FROM reviews r
-		JOIN device_fingerprints df ON df.user_id = r.user_id::text
+		JOIN device_fingerprints df ON df.user_id = r.user_id
 		WHERE df.fingerprint_hash = $1 AND r.college_id::text = $2
 	`, fpHash, collegeID).Scan(&count)
 	if err != nil {
@@ -163,5 +163,8 @@ func (fs *FingerprintService) GetAccountCount(ctx context.Context, fpHash string
 	err := fs.pg.Pool.QueryRow(ctx, `
 		SELECT COUNT(DISTINCT user_id) FROM device_fingerprints WHERE fingerprint_hash = $1
 	`, fpHash).Scan(&count)
-	return count, fmt.Errorf("count accounts: %w", err)
+	if err != nil {
+		return 0, fmt.Errorf("count accounts: %w", err)
+	}
+	return count, nil
 }

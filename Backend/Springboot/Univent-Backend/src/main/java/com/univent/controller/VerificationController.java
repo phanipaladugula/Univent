@@ -60,6 +60,20 @@ public class VerificationController {
 
         return ResponseEntity.ok(response);
     }
+
+    @DeleteMapping("/id-card")
+    public ResponseEntity<Map<String, String>> deleteIdCard(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userRepository.findByEmailHash(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        verificationService.deleteIdCard(user);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "ID card deleted and verification reset");
+        response.put("status", "UNVERIFIED");
+        return ResponseEntity.ok(response);
+    }
 }
 
 // Admin endpoints

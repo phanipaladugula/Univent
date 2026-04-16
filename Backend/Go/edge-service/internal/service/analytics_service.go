@@ -56,7 +56,7 @@ func (as *AnalyticsService) getDashboardMetrics(ctx context.Context) (*model.Das
 	as.pg.Pool.QueryRow(ctx, `SELECT COALESCE(AVG(sentiment_score), 0) FROM reviews WHERE sentiment_score IS NOT NULL`).Scan(&m.AvgReviewSentiment)
 
 	// Pending verifications
-	as.pg.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM users WHERE verification_status = 'PENDING'`).Scan(&m.VerificationsPending)
+	as.pg.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM users WHERE verification_status = 'ID_PENDING'`).Scan(&m.VerificationsPending)
 
 	// Pending flags
 	as.pg.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM flagged_content WHERE status = 'PENDING'`).Scan(&m.FlagsPending)

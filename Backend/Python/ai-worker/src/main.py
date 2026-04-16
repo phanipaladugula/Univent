@@ -1,37 +1,41 @@
 """FastAPI application entry point for the AI Worker service."""
 import logging
 import time
+import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import Counter, Histogram, generate_latest
+from prometheus_fastapi_instrumentator import Instrumentator
 from starlette.responses import Response
 
 from src.config import settings
+from src.consumer import ReviewConsumer
 from src.models.schemas import (
-    ChatRequest, ChatResponse, ChatMetadata, Citation,
-    SummarizeRequest, SummarizeResponse,
-    SuggestRequest, SuggestResponse,
+    ChatMetadata,
+    ChatRequest,
+    ChatResponse,
+    Citation,
+    SuggestRequest,
+    SuggestResponse,
+    SummarizeRequest,
+    SummarizeResponse,
 )
 from src.services.gemini_service import GeminiService
-from src.services.rag_service import RAGService
 from src.services.mcp_tools import MCPTools
-from src.consumer import ReviewConsumer
+from src.services.rag_service import RAGService
 
-# ─── Logging ──────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
 
-# ─── Prometheus Metrics ───────────────────────────────
 CHAT_REQUESTS = Counter("ai_chat_requests_total", "Total AI chat requests")
 CHAT_LATENCY = Histogram("ai_chat_duration_seconds", "AI chat response latency")
 REVIEWS_PROCESSED = Counter("ai_reviews_processed_total", "Total reviews processed")
 
-# ─── Service Instances ────────────────────────────────
 gemini_service: GeminiService = None
 rag_service: RAGService = None
 mcp_tools: MCPTools = None
@@ -41,25 +45,30 @@ review_consumer: ReviewConsumer = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown logic."""
+    del app
     global gemini_service, rag_service, mcp_tools, review_consumer
 
-    logger.info("🚀 Starting AI Worker service")
+    logger.info("Starting AI Worker service")
 
-    # Initialize services
     gemini_service = GeminiService()
     rag_service = RAGService(gemini_service)
     mcp_tools = MCPTools()
+    if not mcp_tools.ping():
+        raise RuntimeError("PostgreSQL is unreachable for MCP tools")
 
-    # Start Kafka consumer
+    qdrant_stats = rag_service.get_collection_stats()
+    if "error" in qdrant_stats:
+        raise RuntimeError(f"Qdrant is unavailable: {qdrant_stats['error']}")
+
     review_consumer = ReviewConsumer(gemini_service, rag_service)
     review_consumer.start()
 
-    logger.info("✅ AI Worker ready")
+    logger.info("AI Worker ready")
     yield
 
-    # Shutdown
-    logger.info("🛑 Shutting down AI Worker")
-    review_consumer.stop()
+    logger.info("Shutting down AI Worker")
+    if review_consumer:
+        review_consumer.stop()
 
 
 app = FastAPI(
@@ -69,10 +78,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-from prometheus_fastapi_instrumentator import Instrumentator
 Instrumentator().instrument(app).expose(app)
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -82,15 +89,35 @@ app.add_middleware(
 )
 
 
-# ─── Health ───────────────────────────────────────────
+@app.middleware("http")
+async def add_request_context(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    start_time = time.time()
+
+    response = await call_next(request)
+    duration_ms = int((time.time() - start_time) * 1000)
+    response.headers["X-Request-ID"] = request_id
+
+    logger.info(
+        "request_completed method=%s path=%s status=%s duration_ms=%s request_id=%s",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+        request_id,
+    )
+    return response
+
 
 @app.get("/health")
 async def health():
     qdrant_stats = rag_service.get_collection_stats() if rag_service else {}
+    postgres_status = "connected" if mcp_tools and mcp_tools.ping() else "disconnected"
     return {
         "status": "healthy",
         "service": "ai-worker",
         "gemini": "connected" if gemini_service else "disconnected",
+        "postgres": postgres_status,
         "qdrant": qdrant_stats,
     }
 
@@ -100,8 +127,6 @@ async def metrics():
     return Response(content=generate_latest(), media_type="text/plain")
 
 
-# ─── AI Chat ──────────────────────────────────────────
-
 @app.post("/api/v1/ai/chat", response_model=ChatResponse)
 async def ai_chat(request: ChatRequest):
     """AI-powered chat with RAG and MCP tool calling."""
@@ -109,15 +134,13 @@ async def ai_chat(request: ChatRequest):
     start_time = time.time()
 
     try:
-        # Step 1: Search Qdrant for relevant review chunks
         rag_results = rag_service.search(
             query=request.query,
             college_id=request.college_id,
             program_id=request.program_id,
         )
-        context_chunks = [r["chunk_text"] for r in rag_results]
+        context_chunks = [result["chunk_text"] for result in rag_results]
 
-        # Step 2: Call MCP tools for real-time data
         tool_results = {}
         tools_called = []
 
@@ -133,7 +156,6 @@ async def ai_chat(request: ChatRequest):
                 tool_results["roi"] = roi
                 tools_called.append("get_roi")
 
-        # Also search reviews via MCP for structured data
         matched_reviews = mcp_tools.search_reviews(
             query=request.query,
             college_id=request.college_id,
@@ -144,29 +166,30 @@ async def ai_chat(request: ChatRequest):
             tool_results["reviews"] = matched_reviews
             tools_called.append("search_reviews")
 
-        # Step 3: Generate response with Gemini
         response_text = gemini_service.generate_chat_response(
             query=request.query,
             context_chunks=context_chunks,
             tool_results=tool_results,
         )
 
-        # Step 4: Build citations from RAG results
         citations = []
         seen_reviews = set()
-        for r in rag_results:
-            if r["review_id"] not in seen_reviews:
-                citations.append(Citation(
-                    review_id=r["review_id"],
-                    excerpt=r["chunk_text"][:200],
-                    rating=r.get("rating"),
-                    verified=r.get("is_verified", False),
-                    year=r.get("graduation_year"),
-                ))
-                seen_reviews.add(r["review_id"])
+        for result in rag_results:
+            if result["review_id"] in seen_reviews:
+                continue
 
-        # Metadata
-        verified_count = sum(1 for r in rag_results if r.get("is_verified"))
+            citations.append(
+                Citation(
+                    review_id=result["review_id"],
+                    excerpt=result["chunk_text"][:200],
+                    rating=result.get("rating"),
+                    verified=result.get("is_verified", False),
+                    year=result.get("graduation_year"),
+                )
+            )
+            seen_reviews.add(result["review_id"])
+
+        verified_count = sum(1 for result in rag_results if result.get("is_verified"))
         reviews_used = len(seen_reviews)
         confidence = "HIGH" if reviews_used >= 40 else "MEDIUM" if reviews_used >= 10 else "LOW"
 
@@ -184,32 +207,26 @@ async def ai_chat(request: ChatRequest):
                 processing_time_ms=processing_time,
             ),
         )
+    except Exception as exc:
+        logger.error("AI chat error: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"AI processing failed: {exc}") from exc
 
-    except Exception as e:
-        logger.error("AI chat error: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"AI processing failed: {str(e)}")
-
-
-# ─── Summarize ────────────────────────────────────────
 
 @app.post("/api/v1/ai/summarize", response_model=SummarizeResponse)
 async def ai_summarize(request: SummarizeRequest):
     """Generate AI summary of all reviews for a college."""
     try:
-        # Get reviews from DB
         reviews = mcp_tools.search_reviews(
             college_id=request.college_id,
             program_id=request.program_id,
             limit=20,
         )
-
         if not reviews:
             raise HTTPException(status_code=404, detail="No reviews found for this college")
 
-        review_texts = [r["excerpt"] for r in reviews]
+        review_texts = [review["excerpt"] for review in reviews]
         college_name = reviews[0].get("college_name", "Unknown")
         program_name = reviews[0].get("program_name")
-
         result = gemini_service.generate_summary(review_texts, college_name, program_name)
 
         return SummarizeResponse(
@@ -218,80 +235,30 @@ async def ai_summarize(request: SummarizeRequest):
             weaknesses=result.get("weaknesses", []),
             reviews_analyzed=len(reviews),
         )
-
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error("Summarize error: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Summarization failed: {str(e)}")
+    except Exception as exc:
+        logger.error("Summarize error: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Summarization failed: {exc}") from exc
 
-
-# ─── Suggest ──────────────────────────────────────────
 
 @app.post("/api/v1/ai/suggest", response_model=SuggestResponse)
 async def ai_suggest(request: SuggestRequest):
     """Get AI-powered college recommendations based on preferences."""
     try:
-        # Get top colleges from rankings
-        import psycopg2
-        import psycopg2.extras
-        conn = psycopg2.connect(settings.POSTGRES_URL, cursor_factory=psycopg2.extras.RealDictCursor)
-        cur = conn.cursor()
-
-        sql = """
-            SELECT DISTINCT ON (college_id)
-                   college_id, college_name, program_name, city, state,
-                   overall_rating, placement_percentage, median_package,
-                   total_fees, weighted_score
-            FROM mv_college_rankings
-            WHERE review_count > 0
-        """
-        params = []
-
-        if request.program_category:
-            sql += " AND category = %s"
-            params.append(request.program_category)
-
-        if request.location:
-            sql += " AND (LOWER(state) LIKE %s OR LOWER(city) LIKE %s)"
-            params.extend([f"%{request.location.lower()}%", f"%{request.location.lower()}%"])
-
-        sql += " ORDER BY college_id, weighted_score DESC LIMIT 10"
-
-        cur.execute(sql, params)
-        rows = cur.fetchall()
-        conn.close()
-
-        recommendations = []
-        for row in rows:
-            highlights = []
-            if row.get("overall_rating") and float(row["overall_rating"]) >= 4:
-                highlights.append(f"High rating: {row['overall_rating']}/5")
-            if row.get("placement_percentage") and float(row["placement_percentage"]) >= 80:
-                highlights.append(f"Strong placements: {row['placement_percentage']}%")
-            if row.get("median_package"):
-                pkg_lpa = float(row["median_package"]) / 100000
-                highlights.append(f"Median package: ₹{pkg_lpa:.1f} LPA")
-
-            recommendations.append({
-                "college_id": str(row["college_id"]),
-                "college_name": row["college_name"],
-                "program_name": row.get("program_name"),
-                "match_score": float(row.get("weighted_score", 0)),
-                "highlights": highlights,
-            })
-
+        recommendations = mcp_tools.get_recommendations(
+            program_category=request.program_category,
+            location=request.location,
+            limit=10,
+        )
         return SuggestResponse(
             recommendations=recommendations,
             reasoning=f"Found {len(recommendations)} colleges matching your criteria.",
         )
+    except Exception as exc:
+        logger.error("Suggest error: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Suggestion failed: {exc}") from exc
 
-    except Exception as e:
-        logger.error("Suggest error: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Suggestion failed: {str(e)}")
-
-
-# ─── RAG Stats (admin) ───────────────────────────────
 
 @app.get("/api/v1/ai/stats")
 async def ai_stats():
@@ -308,4 +275,5 @@ async def ai_stats():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("src.main:app", host=settings.HOST, port=settings.PORT, reload=True)
