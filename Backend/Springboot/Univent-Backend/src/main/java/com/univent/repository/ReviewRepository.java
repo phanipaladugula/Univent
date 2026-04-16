@@ -36,6 +36,9 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
 
     Page<Review> findByUserIdAndStatus(UUID userId, ReviewStatus status, Pageable pageable);
 
+    @Query("SELECT AVG(CAST(r.upvotes AS double) - CAST(r.downvotes AS double)) FROM Review r WHERE r.user.id = :userId AND r.status = 'PUBLISHED'")
+    Double findAverageNetUpvotesByUserId(@Param("userId") UUID userId);
+
     @Query("SELECT r FROM Review r WHERE r.college.id = :collegeId AND r.status = :status " +
             "ORDER BY (r.upvotes - r.downvotes) DESC")
     Page<Review> findMostHelpfulByCollege(@Param("collegeId") UUID collegeId,

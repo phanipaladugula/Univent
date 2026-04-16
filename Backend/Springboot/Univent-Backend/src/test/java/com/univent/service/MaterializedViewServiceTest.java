@@ -1,10 +1,7 @@
 package com.univent.service;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
-
 import static org.mockito.Mockito.*;
 
 class MaterializedViewServiceTest {
@@ -12,13 +9,8 @@ class MaterializedViewServiceTest {
     @Test
     void fetchNewsAutomaticallyDelegatesToRssFeedService() {
         RssFeedService rssFeedService = mock(RssFeedService.class);
-        MaterializedViewService service = new MaterializedViewService(rssFeedService);
-        EntityManager entityManager = mock(EntityManager.class);
-        Query query = mock(Query.class);
-
-        when(entityManager.createNativeQuery(anyString())).thenReturn(query);
-        when(query.executeUpdate()).thenReturn(1);
-        ReflectionTestUtils.setField(service, "entityManager", entityManager);
+        DataSource dataSource = mock(DataSource.class);
+        MaterializedViewService service = new MaterializedViewService(rssFeedService, dataSource);
 
         service.fetchNewsAutomatically();
 

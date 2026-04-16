@@ -145,7 +145,7 @@ services:
   # KAFKA (KRaft mode - no Zookeeper)
   # ============================================
   kafka:
-    image: bitnami/kafka:3.7
+    image: apache/kafka:latest
     ports:
       - "9092:9092"
     environment:

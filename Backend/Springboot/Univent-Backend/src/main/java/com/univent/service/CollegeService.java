@@ -1,5 +1,5 @@
 package com.univent.service;
-
+import com.univent.util.SlugGenerator; 
 import com.univent.model.dto.request.CollegeRequest;
 import com.univent.model.dto.response.CollegeResponse;
 import com.univent.model.entity.College;
