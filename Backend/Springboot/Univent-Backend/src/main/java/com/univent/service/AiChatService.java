@@ -1,5 +1,6 @@
 package com.univent.service;
 
+import com.univent.config.SecretProvider;
 import com.univent.model.dto.request.AiChatRequest;
 import com.univent.model.dto.request.AiSuggestRequest;
 import com.univent.model.dto.request.AiSummarizeRequest;

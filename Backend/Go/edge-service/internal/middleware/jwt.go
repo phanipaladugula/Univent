@@ -15,24 +15,37 @@ import (
 type contextKey string
 
 const (
-	UserIDKey   contextKey = "user_id"
-	UserRoleKey contextKey = "user_role"
+	UserIDKey          contextKey = "user_id"
+	UserRoleKey        contextKey = "user_role"
+	InternalRequestKey contextKey = "is_internal_request"
 )
 
 type JWTAuth struct {
-	secret []byte
+	secret         []byte
+	internalSecret string
 }
 
-func NewJWTAuth(hexSecret string) *JWTAuth {
+func NewJWTAuth(hexSecret string, internalSecret string) *JWTAuth {
 	secretBytes, err := hex.DecodeString(hexSecret)
 	if err != nil {
 		secretBytes = []byte(hexSecret)
 	}
-	return &JWTAuth{secret: secretBytes}
+	return &JWTAuth{
+		secret:         secretBytes,
+		internalSecret: internalSecret,
+	}
 }
 
 func (j *JWTAuth) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Bypass if this is a verified internal service request (Context flag OR Header fallback)
+		isInternal, _ := r.Context().Value(InternalRequestKey).(bool)
+		internalToken := r.Header.Get("X-Internal-Token")
+		if isInternal || (internalToken != "" && internalToken == j.internalSecret) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		claims, err := j.extractClaims(r)
 		if err != nil {
 			http.Error(w, fmt.Sprintf(`{"success":false,"error":"%s"}`, err.Error()), http.StatusUnauthorized)
@@ -47,7 +60,20 @@ func (j *JWTAuth) RequireAuth(next http.Handler) http.Handler {
 
 func (j *JWTAuth) RequireAdmin(next http.Handler) http.Handler {
 	return j.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		role := r.Context().Value(UserRoleKey).(string)
+		// Also bypass role check for verified internal services
+		isInternal, _ := r.Context().Value(InternalRequestKey).(bool)
+		internalToken := r.Header.Get("X-Internal-Token")
+		if isInternal || (internalToken != "" && internalToken == j.internalSecret) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		roleVal := r.Context().Value(UserRoleKey)
+		if roleVal == nil {
+			http.Error(w, `{"success":false,"error":"Unauthorized"}`, http.StatusUnauthorized)
+			return
+		}
+		role := roleVal.(string)
 		if role != "ROLE_ADMIN" && role != "ADMIN" {
 			http.Error(w, `{"success":false,"error":"Admin access required"}`, http.StatusForbidden)
 			return

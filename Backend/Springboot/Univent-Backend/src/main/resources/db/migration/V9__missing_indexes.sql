@@ -1,5 +1,4 @@
--- ==============================================
--- V10: Performance Optimization - Missing Indexes
+-- V9: Performance Optimization - Missing Indexes
 -- ==============================================
 
 -- Add individual index for program_id in reviews (V1 only had a composite index)

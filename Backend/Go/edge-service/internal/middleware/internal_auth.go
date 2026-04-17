@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 )
+
 
 // InternalAuthMiddleware validates the X-Internal-Token header against a shared secret.
 // This is used for inter-service communication security.
@@ -15,7 +17,9 @@ func InternalAuthMiddleware(sharedSecret string) func(next http.Handler) http.Ha
 				http.Error(w, "Forbidden: Invalid internal token", http.StatusForbidden)
 				return
 			}
-			next.ServeHTTP(w, r)
+			// Set context flag to allow bypassing JWT check
+			ctx := context.WithValue(r.Context(), InternalRequestKey, true)
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }

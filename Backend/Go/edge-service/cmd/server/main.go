@@ -48,7 +48,7 @@ func main() {
 	healthService := service.NewHealthService(pg, redis, cfg.SpringBootURL, cfg.PythonAIURL)
 
 	// ─── Initialize middleware ────────────────────────
-	jwtAuth := middleware.NewJWTAuth(cfg.JWTSecret)
+	jwtAuth := middleware.NewJWTAuth(cfg.JWTSecret, cfg.InternalSharedSecret)
 	rateLimiter := middleware.NewRateLimiter(redis.Client)
 	fingerprint := middleware.NewFingerprintMiddleware()
 
@@ -78,8 +78,8 @@ func main() {
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Authorization", "Content-Type", "X-Request-ID"},
-		ExposedHeaders:   []string{"X-Request-ID", "X-RateLimit-Remaining", "X-RateLimit-Reset"},
+		AllowedHeaders:   []string{"Authorization", "Content-Type", "X-Request-ID", "X-Internal-Token"},
+		ExposedHeaders:   []string{"X-Request-ID", "X-RateLimit-Remaining", "X-RateLimit-Reset", "X-Internal-Token"},
 		AllowCredentials: true,
 		MaxAge:           3600,
 	}))
