@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"net/http"
 	"strings"
@@ -25,13 +24,12 @@ type JWTAuth struct {
 	internalSecret string
 }
 
-func NewJWTAuth(hexSecret string, internalSecret string) *JWTAuth {
-	secretBytes, err := hex.DecodeString(hexSecret)
-	if err != nil {
-		secretBytes = []byte(hexSecret)
-	}
+// NewJWTAuth builds JWT validation using the same key material as Spring Boot's
+// JwtTokenProvider: UTF-8 bytes of jwt.secret (not hex-decoded), so tokens minted
+// by Spring verify correctly on the edge service.
+func NewJWTAuth(jwtSecret string, internalSecret string) *JWTAuth {
 	return &JWTAuth{
-		secret:         secretBytes,
+		secret:         []byte(jwtSecret),
 		internalSecret: internalSecret,
 	}
 }

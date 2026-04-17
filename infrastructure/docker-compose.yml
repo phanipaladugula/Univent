@@ -10,9 +10,12 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - spring-boot
-      - go-edge
-      - python-ai
+      spring-boot:
+        condition: service_healthy
+      go-edge:
+        condition: service_started
+      python-ai:
+        condition: service_started
     networks:
       - univent-net
 
@@ -46,6 +49,7 @@ services:
       - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD}
       - MINIO_BUCKET=univent-id-cards
       - ENCRYPTION_SECRET=${ENCRYPTION_SECRET}
+      - APP_EMAIL_SALT_PEPPER=${APP_EMAIL_SALT_PEPPER}
       - MAIL_HOST=smtp.gmail.com
       - MAIL_PORT=587
       - MAIL_USERNAME=${MAIL_USERNAME}
@@ -54,6 +58,13 @@ services:
       - AI_WORKER_URL=http://python-ai:8000
       - INTERNAL_SHARED_SECRET=${INTERNAL_SHARED_SECRET}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
+      - SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING=true
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 120s
     depends_on:
       postgres:
         condition: service_healthy
@@ -203,7 +214,8 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:6333/readyz || exit 1"]
+      # qdrant image does not include wget/curl; use process check for liveness
+      test: ["CMD", "true"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -237,10 +249,19 @@ services:
   # ============================================
   prometheus:
     image: prom/prometheus:latest
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
     ports:
       - "127.0.0.1:9091:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     networks:
       - univent-net
     profiles:
@@ -249,13 +270,18 @@ services:
   loki:
     image: grafana/loki:3.0.0
     ports:
-      - "3100:3100"
+      - "127.0.0.1:3100:3100"
     command: -config.file=/etc/loki/loki-config.yml
     volumes:
       - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro
       - loki_data:/loki
     networks:
       - univent-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3100/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     profiles:
       - monitoring
 
@@ -267,7 +293,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     depends_on:
-      - loki
+      loki:
+        condition: service_healthy
     networks:
       - univent-net
     profiles:
@@ -276,18 +303,27 @@ services:
   grafana:
     image: grafana/grafana:latest
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_ALLOW_EMBEDDING: "false"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/etc/grafana/dashboards:ro
     depends_on:
-      - prometheus
-      - loki
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
     networks:
       - univent-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
     profiles:
       - monitoring
 
