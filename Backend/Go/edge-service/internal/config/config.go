@@ -16,8 +16,9 @@ type Config struct {
 	KafkaBrokers  []string
 	JWTSecret     string
 	SpringBootURL string
-	PythonAIURL   string
-	Environment   string
+	PythonAIURL          string
+	Environment          string
+	InternalSharedSecret string
 }
 
 func Load() *Config {
@@ -33,8 +34,9 @@ func Load() *Config {
 		KafkaBrokers:  strings.Split(requireEnv("KAFKA_BROKERS"), ","),
 		JWTSecret:     requireEnv("JWT_SECRET"),
 		SpringBootURL: getEnv("SPRING_BOOT_URL", "http://spring-boot:8080"),
-		PythonAIURL:   getEnv("PYTHON_AI_URL", "http://python-ai:8000"),
-		Environment:   getEnv("ENVIRONMENT", "development"),
+		PythonAIURL:          getEnv("PYTHON_AI_URL", "http://python-ai:8000"),
+		Environment:          getEnv("ENVIRONMENT", "development"),
+		InternalSharedSecret: getEnv("INTERNAL_SHARED_SECRET", "d3f4ult_c0mpl3x_s3cr3t_key_for_d3v"),
 	}
 
 	log.Printf("✅ Config loaded (env=%s, port=%s, kafka=%v)", cfg.Environment, cfg.Port, cfg.KafkaBrokers)

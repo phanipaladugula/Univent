@@ -107,8 +107,9 @@ func main() {
 		r.Put("/read-all", notifHandler.MarkAllAsRead)
 	})
 
-	// Analytics (admin only)
+	// Analytics (internal or admin)
 	r.Route("/api/v1/analytics", func(r chi.Router) {
+		r.Use(middleware.InternalAuthMiddleware(cfg.InternalSharedSecret))
 		r.Use(jwtAuth.RequireAdmin)
 		r.Get("/dashboard", analyticsHandler.GetDashboard)
 		r.Get("/reviews/daily", analyticsHandler.GetReviewsDaily)
@@ -116,8 +117,9 @@ func main() {
 		r.Get("/colleges/popular", analyticsHandler.GetPopularColleges)
 	})
 
-	// Audit logs (admin only)
+	// Audit logs (internal or admin)
 	r.Route("/api/v1/admin/audit", func(r chi.Router) {
+		r.Use(middleware.InternalAuthMiddleware(cfg.InternalSharedSecret))
 		r.Use(jwtAuth.RequireAdmin)
 		r.Get("/logs", auditHandler.GetAuditLogs)
 	})

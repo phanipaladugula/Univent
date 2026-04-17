@@ -91,10 +91,26 @@ app.add_middleware(
 )
 
 
+import os
+import asyncio
+
 @app.middleware("http")
 async def add_request_context(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
     start_time = time.time()
+
+    # Inter-Service Security
+    if request.url.path not in ["/health", "/metrics", "/docs", "/openapi.json"]:
+        token = request.headers.get("X-Internal-Token")
+        expected_secret = os.getenv("INTERNAL_SHARED_SECRET", "d3f4ult_c0mpl3x_s3cr3t_key_for_d3v")
+        if token != expected_secret:
+            logger.warning(f"Unauthorized access attempt to {request.url.path} with token: {token}")
+            return Response(content="Forbidden", status_code=403)
+
+    # Chaos Engineering Hook
+    delay_ms = request.headers.get("X-Test-Delay")
+    if delay_ms and delay_ms.isdigit():
+        await asyncio.sleep(int(delay_ms) / 1000.0)
 
     response = await call_next(request)
     duration_ms = int((time.time() - start_time) * 1000)

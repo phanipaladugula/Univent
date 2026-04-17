@@ -8,6 +8,10 @@ import com.univent.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.retrytopic.DltStrategy;
+import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +31,13 @@ public class ReviewEventConsumer {
      * Updates the review entity with AI-generated data (sentiment, topics, moderation).
      * If moderation flags the content, the review status changes to FLAGGED.
      */
+    @RetryableTopic(
+            attempts = "3",
+            backoff = @Backoff(delay = 2000, multiplier = 1.0),
+            topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE,
+            dltStrategy = DltStrategy.FAIL_ON_ERROR,
+            dltTopicSuffix = "-dlt"
+    )
     @KafkaListener(topics = "review.processed", groupId = "spring-boot-reviews")
     @Transactional
     public void onReviewProcessed(String message) {
@@ -90,22 +101,4 @@ public class ReviewEventConsumer {
         }
     }
 
-    @KafkaListener(topics = "review.submitted.dlq", groupId = "spring-boot-dlq")
-    @Transactional
-    public void onDlqMessage(String message) {
-        try {
-            JsonNode event = objectMapper.readTree(message);
-            String reviewIdStr = event.get("review_id").asText();
-            UUID reviewId = UUID.fromString(reviewIdStr);
-
-            Optional<Review> optReview = reviewRepository.findById(reviewId);
-            if (optReview.isPresent()) {
-                Review review = optReview.get();
-                // We keep it pending or maybe set a new status PENDING_RETRY, but let's keep it PENDING and notify admins.
-                log.error("Review {} entered DLQ. Manual intervention or retry required.", reviewIdStr);
-            }
-        } catch (Exception e) {
-            log.error("Failed to process DLQ message: {}", e.getMessage(), e);
-        }
-    }
 }

@@ -77,7 +77,7 @@ public class SecurityConfig {
         List<String> allowedOrigins;
         if (Arrays.asList(environment.getActiveProfiles()).contains("prod")) {
             allowedOrigins = List.of(
-                    "https://univent.com",
+                    "https://app.univent.com",
                     "https://www.univent.com"
             );
         } else {
@@ -111,7 +111,6 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // Using BCrypt for security (even though we use OTP, this is for any future password-based auth)
         return new BCryptPasswordEncoder();
     }
 

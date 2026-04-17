@@ -12,7 +12,12 @@ public class VaultSecretProvider implements SecretProvider {
     @Override
     public String getEncryptionSecret() {
         log.warn("Vault profile active but Vault integration is stubbed. Falling back to default behaviour or throwing exception if strict.");
-        // Normally, you would use Spring Vault here to fetch the secret text from HashiCorp Vault or AWS KMS
         return "fallback-or-vault-secret";
+    }
+
+    @Override
+    public String getInternalSharedSecret() {
+        log.warn("Vault profile active but Vault integration is stubbed for internal secret.");
+        return "fallback-or-vault-internal-secret";
     }
 }

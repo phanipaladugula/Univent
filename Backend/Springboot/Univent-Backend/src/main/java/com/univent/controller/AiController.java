@@ -21,8 +21,10 @@ public class AiController {
     private final AiChatService aiChatService;
 
     @PostMapping("/chat")
-    public ResponseEntity<AiChatResponse> chat(@Valid @RequestBody AiChatRequest request) {
-        return ResponseEntity.ok(aiChatService.chat(request));
+    public ResponseEntity<AiChatResponse> chat(
+            @Valid @RequestBody AiChatRequest request,
+            @RequestHeader(value="X-Test-Delay", required=false) String testDelay) {
+        return ResponseEntity.ok(aiChatService.chat(request, testDelay));
     }
 
     @PostMapping("/summarize")
