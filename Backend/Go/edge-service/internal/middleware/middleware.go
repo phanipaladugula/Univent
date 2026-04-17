@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/redis/go-redis/v9"
 )
@@ -23,10 +25,10 @@ type RateLimitConfig struct {
 }
 
 type RateLimiter struct {
-	redis  *redis.Client
-	local  map[string]*localBucket
-	mu     sync.RWMutex
-	rules  map[string]RateLimitConfig
+	redis *redis.Client
+	local map[string]*localBucket
+	mu    sync.RWMutex
+	rules map[string]RateLimitConfig
 }
 
 type localBucket struct {
@@ -36,26 +38,35 @@ type localBucket struct {
 	window    time.Duration
 }
 
+var rateLimitScript = redis.NewScript(`
+local current = redis.call("INCR", KEYS[1])
+if current == 1 then
+  redis.call("PEXPIRE", KEYS[1], ARGV[1])
+end
+local ttl = redis.call("PTTL", KEYS[1])
+return {current, ttl}
+`)
+
 func NewRateLimiter(redisClient *redis.Client) *RateLimiter {
 	rl := &RateLimiter{
 		redis: redisClient,
 		local: make(map[string]*localBucket),
 		rules: map[string]RateLimitConfig{
-			"GET:/api/v1/":                {Limit: 120, Window: time.Minute},
-			"POST:/api/v1/auth/register":  {Limit: 5, Window: 15 * time.Minute},
-			"POST:/api/v1/auth/verify":    {Limit: 10, Window: 15 * time.Minute},
-			"POST:/api/v1/reviews":        {Limit: 3, Window: 24 * time.Hour},
+			"GET:/api/v1/":                 {Limit: 120, Window: time.Minute},
+			"POST:/api/v1/auth/register":   {Limit: 5, Window: 15 * time.Minute},
+			"POST:/api/v1/auth/verify":     {Limit: 10, Window: 15 * time.Minute},
+			"POST:/api/v1/reviews":         {Limit: 3, Window: 24 * time.Hour},
 			"POST:/api/v1/reviews/comment": {Limit: 30, Window: time.Minute},
-			"POST:/api/v1/ai/chat":        {Limit: 20, Window: time.Hour},
-			"POST:/api/v1/news/posts":     {Limit: 5, Window: time.Hour},
-			"POST:/api/v1/flag":           {Limit: 10, Window: time.Hour},
-			"DEFAULT":                     {Limit: 60, Window: time.Minute},
+			"POST:/api/v1/ai/chat":         {Limit: 20, Window: time.Hour},
+			"POST:/api/v1/news/posts":      {Limit: 5, Window: time.Hour},
+			"POST:/api/v1/flag":            {Limit: 10, Window: time.Hour},
+			"DEFAULT":                      {Limit: 60, Window: time.Minute},
 		},
 	}
 
-	// Periodic cleanup of stale local buckets
 	go func() {
 		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
 		for range ticker.C {
 			rl.cleanup()
 		}
@@ -69,15 +80,18 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 		clientKey := rl.getClientKey(r)
 		rule := rl.matchRule(r)
 
-		allowed, remaining, resetAt := rl.checkLocal(clientKey, rule)
+		allowed, remaining, resetAt := rl.checkAllowed(r.Context(), clientKey, rule)
 
 		w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", rule.Limit))
 		w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
 		w.Header().Set("X-RateLimit-Reset", fmt.Sprintf("%d", resetAt))
 
 		if !allowed {
-			w.Header().Set("Retry-After", fmt.Sprintf("%d", int(rule.Window.Seconds())))
-			http.Error(w, `{"success":false,"error":"Too many requests. Please try again later."}`, http.StatusTooManyRequests)
+			resetIn := maxInt64(1, resetAt-time.Now().Unix())
+			w.Header().Set("Retry-After", fmt.Sprintf("%d", resetIn))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, _ = w.Write([]byte(`{"success":false,"error":"Too many requests. Please try again later."}`))
 			return
 		}
 
@@ -87,22 +101,20 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 
 func (rl *RateLimiter) getClientKey(r *http.Request) string {
 	ip := getClientIP(r)
-	path := r.URL.Path
+	path := normalizeRoutePattern(r)
 	method := r.Method
 	return fmt.Sprintf("rl:%s:%s:%s", method, path, ip)
 }
 
 func (rl *RateLimiter) matchRule(r *http.Request) RateLimitConfig {
-	path := r.URL.Path
+	path := normalizeRoutePattern(r)
 	method := r.Method
 	key := method + ":" + path
 
-	// Check exact match first
 	if rule, ok := rl.rules[key]; ok {
 		return rule
 	}
 
-	// Check prefix match
 	for pattern, rule := range rl.rules {
 		if pattern == "DEFAULT" {
 			continue
@@ -114,6 +126,51 @@ func (rl *RateLimiter) matchRule(r *http.Request) RateLimitConfig {
 	}
 
 	return rl.rules["DEFAULT"]
+}
+
+func (rl *RateLimiter) checkAllowed(ctx context.Context, key string, rule RateLimitConfig) (allowed bool, remaining int, resetAt int64) {
+	if rl.redis != nil {
+		allowed, remaining, resetAt, err := rl.checkRedis(ctx, key, rule)
+		if err == nil {
+			return allowed, remaining, resetAt
+		}
+		log.Printf("rate limiter redis fallback for key=%s error=%v", key, err)
+	}
+
+	return rl.checkLocal(key, rule)
+}
+
+func (rl *RateLimiter) checkRedis(ctx context.Context, key string, rule RateLimitConfig) (bool, int, int64, error) {
+	result, err := rateLimitScript.Run(ctx, rl.redis, []string{key}, rule.Window.Milliseconds()).Result()
+	if err != nil {
+		return false, 0, 0, err
+	}
+
+	values, ok := result.([]interface{})
+	if !ok || len(values) != 2 {
+		return false, 0, 0, fmt.Errorf("unexpected redis rate-limit result: %T", result)
+	}
+
+	current, err := toInt64(values[0])
+	if err != nil {
+		return false, 0, 0, err
+	}
+	ttlMs, err := toInt64(values[1])
+	if err != nil {
+		return false, 0, 0, err
+	}
+
+	if ttlMs < 0 {
+		ttlMs = rule.Window.Milliseconds()
+	}
+
+	remaining := rule.Limit - int(current)
+	if remaining < 0 {
+		remaining = 0
+	}
+	resetAt := time.Now().Add(time.Duration(ttlMs) * time.Millisecond).Unix()
+
+	return current <= int64(rule.Limit), remaining, resetAt, nil
 }
 
 func (rl *RateLimiter) checkLocal(key string, rule RateLimitConfig) (allowed bool, remaining int, resetAt int64) {
@@ -153,6 +210,45 @@ func (rl *RateLimiter) cleanup() {
 	}
 }
 
+func normalizeRoutePattern(r *http.Request) string {
+	if routeCtx := chi.RouteContext(r.Context()); routeCtx != nil {
+		if pattern := routeCtx.RoutePattern(); pattern != "" {
+			return pattern
+		}
+	}
+
+	path := r.URL.Path
+	if path == "" {
+		return "/"
+	}
+	if len(path) > 80 {
+		return path[:80]
+	}
+	return path
+}
+
+func toInt64(v interface{}) (int64, error) {
+	switch value := v.(type) {
+	case int64:
+		return value, nil
+	case int:
+		return int64(value), nil
+	case string:
+		var parsed int64
+		_, err := fmt.Sscan(value, &parsed)
+		return parsed, err
+	default:
+		return 0, fmt.Errorf("unsupported numeric type %T", v)
+	}
+}
+
+func maxInt64(a, b int64) int64 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 // ─── Device Fingerprinting ──────────────────────────
 
 type FingerprintMiddleware struct{}
@@ -183,7 +279,6 @@ func GenerateFingerprint(r *http.Request) string {
 }
 
 func getClientIP(r *http.Request) string {
-	// Check X-Forwarded-For header first (from NGINX)
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 		parts := strings.Split(xff, ",")
 		return strings.TrimSpace(parts[0])
@@ -210,8 +305,8 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(wrapped, r)
 
 		requestID := chimw.GetReqID(r.Context())
-		log.Printf("method=%s path=%s client_ip=%s status=%d duration=%s request_id=%s",
-			r.Method, r.URL.Path, getClientIP(r),
+		log.Printf("method=%s path=%s route=%s client_ip=%s status=%d duration=%s request_id=%s",
+			r.Method, r.URL.Path, normalizeRoutePattern(r), getClientIP(r),
 			wrapped.statusCode, time.Since(start), requestID)
 	})
 }

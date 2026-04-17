@@ -107,14 +107,23 @@ CREATE INDEX IF NOT EXISTS idx_device_fp_flagged ON device_fingerprints(is_flagg
 CREATE INDEX IF NOT EXISTS idx_ai_chat_user ON ai_chat_sessions(user_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_chat_messages_session ON ai_chat_messages(session_id, created_at);
 
--- Trigger for notification_preferences updated_at
-CREATE TRIGGER update_notification_prefs_updated_at
-    BEFORE UPDATE ON notification_preferences
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'update_notification_prefs_updated_at'
+    ) THEN
+        CREATE TRIGGER update_notification_prefs_updated_at
+            BEFORE UPDATE ON notification_preferences
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
--- Trigger for ai_chat_sessions updated_at
-CREATE TRIGGER update_ai_chat_sessions_updated_at
-    BEFORE UPDATE ON ai_chat_sessions
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'update_ai_chat_sessions_updated_at'
+    ) THEN
+        CREATE TRIGGER update_ai_chat_sessions_updated_at
+            BEFORE UPDATE ON ai_chat_sessions
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;

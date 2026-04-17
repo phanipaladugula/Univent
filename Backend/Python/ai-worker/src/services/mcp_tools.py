@@ -17,12 +17,14 @@ class MCPTools:
         logger.info("MCP tools initialized")
 
     def _get_conn(self):
-        return psycopg2.connect(
+        conn = psycopg2.connect(
             self.conn_params,
             cursor_factory=psycopg2.extras.RealDictCursor,
             connect_timeout=settings.POSTGRES_CONNECT_TIMEOUT,
             options=f"-c statement_timeout={settings.POSTGRES_STATEMENT_TIMEOUT_MS}",
         )
+        conn.set_session(readonly=True, autocommit=True)
+        return conn
 
     def ping(self) -> bool:
         try:
@@ -36,6 +38,7 @@ class MCPTools:
             return False
 
     def search_reviews(self, query: str = None, college_id: str = None, program_id: str = None, limit: int = 10) -> List[dict]:
+        limit = max(1, min(limit, 50))
         try:
             with closing(self._get_conn()) as conn:
                 with conn.cursor() as cur:
@@ -61,7 +64,7 @@ class MCPTools:
                         params.append(program_id)
                     if query:
                         sql += " AND r.review_text ILIKE %s"
-                        params.append(f"%{query}%")
+                        params.append(f"%{query.strip()}%")
 
                     sql += " ORDER BY r.upvotes DESC, r.created_at DESC LIMIT %s"
                     params.append(limit)
@@ -207,6 +210,7 @@ class MCPTools:
             return {"error": str(exc)}
 
     def get_recommendations(self, program_category: str = None, location: str = None, limit: int = 10) -> List[dict]:
+        limit = max(1, min(limit, 25))
         try:
             with closing(self._get_conn()) as conn:
                 with conn.cursor() as cur:

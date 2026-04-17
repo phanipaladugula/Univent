@@ -1,41 +1,182 @@
 {
-  "title": "Univent Gateway Overview",
-  "timezone": "browser",
-  "refresh": "5s",
-  "schemaVersion": 36,
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
   "panels": [
     {
-      "type": "timeseries",
-      "title": "Edge Service Real-Time Requests (Total)",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "green", "value": 3 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value"
+      },
       "targets": [
-        {
-          "expr": "sum(rate(http_requests_total[1m])) by (method)",
-          "legendFormat": "{{method}} Requests/Sec"
-        }
-      ]
+        { "expr": "sum(up{job=~\"spring-boot|go-edge|python-ai\"})", "refId": "A" }
+      ],
+      "title": "Healthy Application Targets",
+      "type": "stat"
     },
     {
-      "type": "stat",
-      "title": "Python AI Endpoints",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 0 },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value"
+      },
       "targets": [
-        {
-          "expr": "sum(rate(http_requests_total{job=\"python-ai\"}[5m]))",
-          "legendFormat": "AI Conversions / Min"
-        }
-      ]
+        { "expr": "sum(rate(http_requests_total{job=\"go-edge\"}[5m]))", "refId": "A" }
+      ],
+      "title": "Gateway Request Rate",
+      "type": "stat"
     },
     {
-      "type": "timeseries",
-      "title": "Median Latency (Go API)",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 0 },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value"
+      },
       "targets": [
-        {
-          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
-          "legendFormat": "p50 Response Time (秒)"
-        }
-      ]
+        { "expr": "sum(rate(ai_chat_requests_total[5m]))", "refId": "A" }
+      ],
+      "title": "AI Chat Throughput",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 0 },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value"
+      },
+      "targets": [
+        { "expr": "sum(rate(http_requests_total{job=\"go-edge\",status=~\"5..\"}[5m]))", "refId": "A" }
+      ],
+      "title": "Gateway 5xx Rate",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 7 },
+      "id": 5,
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "expr": "sum(rate(http_requests_total{job=\"go-edge\"}[5m])) by (method, route)", "legendFormat": "{{method}} {{route}}", "refId": "A" }
+      ],
+      "title": "Gateway Traffic by Route",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 7 },
+      "id": 6,
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"go-edge\"}[5m])) by (le, route))", "legendFormat": "{{route}} p95", "refId": "A" }
+      ],
+      "title": "Gateway p95 Latency by Route",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "id": 7,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "expr": "up{job=~\"spring-boot|go-edge|python-ai|postgres-exporter|redis-exporter|minio\"}", "legendFormat": "{{job}}", "refId": "A" }
+      ],
+      "title": "Dependency and Service Availability",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "id": 8,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(ai_chat_duration_seconds_bucket[5m])) by (le))", "legendFormat": "AI chat p95", "refId": "A" }
+      ],
+      "title": "AI Latency",
+      "type": "timeseries"
     }
-  ]
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["overview", "production"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "browser",
+  "title": "Univent Production Overview",
+  "uid": "univent-overview",
+  "version": 2
 }

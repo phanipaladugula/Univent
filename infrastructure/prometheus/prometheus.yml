@@ -17,3 +17,23 @@ scrape_configs:
     metrics_path: '/metrics'
     static_configs:
       - targets: ['python-ai:8000']
+
+  - job_name: 'python-ai-readiness'
+    metrics_path: '/ready'
+    static_configs:
+      - targets: ['python-ai:8000']
+
+  - job_name: 'postgres-exporter'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  - job_name: 'redis-exporter'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  - job_name: 'minio'
+    metrics_path: '/minio/v2/metrics/cluster'
+    static_configs:
+      - targets: ['minio:9000']

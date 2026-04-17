@@ -1,52 +1,141 @@
 {
-  "title": "Univent Observability",
-  "timezone": "browser",
-  "refresh": "10s",
-  "schemaVersion": 36,
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "graphTooltip": 1,
   "panels": [
     {
-      "type": "timeseries",
-      "title": "Spring Boot Availability",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "up{job=\"spring-boot\"}",
-          "legendFormat": "spring-boot"
-        }
-      ]
+        { "expr": "up{job=~\"spring-boot|go-edge|python-ai\"}", "legendFormat": "{{job}}", "refId": "A" }
+      ],
+      "title": "Application Availability",
+      "type": "timeseries"
     },
     {
-      "type": "timeseries",
-      "title": "AI Chat Throughput",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "id": 2,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(rate(ai_chat_requests_total[5m]))",
-          "legendFormat": "requests/sec"
-        }
-      ]
+        { "expr": "up{job=~\"postgres-exporter|redis-exporter|minio\"}", "legendFormat": "{{job}}", "refId": "A" }
+      ],
+      "title": "Dependency Availability",
+      "type": "timeseries"
     },
     {
-      "type": "logs",
-      "title": "Application Logs",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "id": 3,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "targets": [
-        {
-          "expr": "{compose_service=~\"spring-boot|go-edge|python-ai|nginx\"}"
-        }
-      ]
+        { "expr": "sum(rate(http_requests_total{job=\"go-edge\",status=~\"4..|5..\"}[5m])) by (status)", "legendFormat": "{{status}}", "refId": "A" }
+      ],
+      "title": "Gateway Error Rate by Status",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 4,
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"go-edge\"}[5m])) by (le, route))", "legendFormat": "{{route}} p95", "refId": "A" }
+      ],
+      "title": "Gateway p95 Latency by Route",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 5,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(ai_chat_duration_seconds_bucket[5m])) by (le))", "legendFormat": "AI chat p95", "refId": "A" }
+      ],
+      "title": "AI Latency Distribution",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 },
+      "id": 6,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "expr": "jvm_memory_used_bytes{area=\"heap\"}", "legendFormat": "heap used", "refId": "A" }
+      ],
+      "title": "JVM Heap Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 },
+      "id": 7,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "expr": "hikaricp_connections_active{pool=\"HikariPool-1\"}", "legendFormat": "active", "refId": "A" },
+        { "expr": "hikaricp_connections_idle{pool=\"HikariPool-1\"}", "legendFormat": "idle", "refId": "B" },
+        { "expr": "hikaricp_connections_pending{pool=\"HikariPool-1\"}", "legendFormat": "pending", "refId": "C" }
+      ],
+      "title": "Spring Database Pool",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
+      "id": 8,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "expr": "redis_up", "legendFormat": "redis exporter", "refId": "A" },
+        { "expr": "pg_up", "legendFormat": "postgres exporter", "refId": "B" }
+      ],
+      "title": "Exporter Reachability",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 24 },
+      "id": 9,
+      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": true, "showCommonLabels": false, "showLabels": true, "sortOrder": "Descending", "wrapLogMessage": false },
+      "targets": [
+        { "expr": "{compose_service=~\"spring-boot|go-edge|python-ai|nginx\"} |= \"request_completed\" or |= \"ERROR\" or |= \"WARN\"" }
+      ],
+      "title": "Operational Logs",
+      "type": "logs"
     }
-  ]
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["observability", "production"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "browser",
+  "title": "Univent Deep Observability",
+  "uid": "univent-observability",
+  "version": 2
 }

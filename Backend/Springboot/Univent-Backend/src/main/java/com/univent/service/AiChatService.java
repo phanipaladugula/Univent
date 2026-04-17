@@ -1,5 +1,6 @@
 package com.univent.service;
 
+import com.univent.config.RequestCorrelationFilter;
 import com.univent.config.SecretProvider;
 import com.univent.model.dto.request.AiChatRequest;
 import com.univent.model.dto.request.AiSuggestRequest;
@@ -10,7 +11,12 @@ import com.univent.model.dto.response.AiSuggestResponse;
 import com.univent.model.dto.response.AiSummarizeResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
@@ -27,13 +33,19 @@ public class AiChatService {
     @Value("${ai.worker.url:http://localhost:8000}")
     private String aiWorkerBaseUrl;
 
-    private org.springframework.http.HttpHeaders getHeaders(String testDelay) {
-        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+    private HttpHeaders getHeaders(String testDelay) {
+        HttpHeaders headers = new HttpHeaders();
         headers.set("X-Internal-Token", secretProvider.getInternalSharedSecret());
-        if (testDelay != null && !testDelay.isEmpty()) {
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        String requestId = MDC.get(RequestCorrelationFilter.REQUEST_ID_MDC_KEY);
+        if (requestId != null && !requestId.isBlank()) {
+            headers.set(RequestCorrelationFilter.REQUEST_ID_HEADER, requestId);
+        }
+
+        if (testDelay != null && !testDelay.isBlank()) {
             headers.set("X-Test-Delay", testDelay);
         }
-        headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
         return headers;
     }
 
@@ -51,13 +63,13 @@ public class AiChatService {
 
     public AiStatsResponse stats() {
         try {
-            org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(getHeaders(null));
+            HttpEntity<Void> entity = new HttpEntity<>(getHeaders(null));
             ResponseEntity<AiStatsResponse> response = restTemplate.exchange(
                     aiWorkerBaseUrl + "/api/v1/ai/stats",
-                    org.springframework.http.HttpMethod.GET,
+                    HttpMethod.GET,
                     entity,
                     AiStatsResponse.class);
-            return response.getBody();
+            return requireBody(response, "AI stats");
         } catch (RestClientException ex) {
             log.error("Failed to fetch AI worker stats", ex);
             throw new RuntimeException("AI worker is unavailable");
@@ -66,16 +78,23 @@ public class AiChatService {
 
     private <T> T post(String path, Object payload, Class<T> responseType, String testDelay) {
         try {
-            org.springframework.http.HttpEntity<Object> entity = new org.springframework.http.HttpEntity<>(payload, getHeaders(testDelay));
+            HttpEntity<Object> entity = new HttpEntity<>(payload, getHeaders(testDelay));
             ResponseEntity<T> response = restTemplate.exchange(
                     aiWorkerBaseUrl + path,
-                    org.springframework.http.HttpMethod.POST,
+                    HttpMethod.POST,
                     entity,
                     responseType);
-            return response.getBody();
+            return requireBody(response, path);
         } catch (RestClientException ex) {
             log.error("AI worker request failed for path {}", path, ex);
             throw new RuntimeException("AI worker is unavailable");
         }
+    }
+
+    private <T> T requireBody(ResponseEntity<T> response, String operation) {
+        if (!response.hasBody() || response.getBody() == null) {
+            throw new RuntimeException("AI worker returned an empty response for " + operation);
+        }
+        return response.getBody();
     }
 }

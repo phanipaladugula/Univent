@@ -115,6 +115,8 @@ services:
     environment:
       - HOST=0.0.0.0
       - PORT=8000
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - LOG_LEVEL=${AI_WORKER_LOG_LEVEL:-INFO}
       - POSTGRES_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/univent
       - KAFKA_BROKERS=kafka:29092
       - KAFKA_SECURITY_PROTOCOL=${KAFKA_SECURITY_PROTOCOL:-PLAINTEXT}
@@ -126,6 +128,12 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - INTERNAL_SHARED_SECRET=${INTERNAL_SHARED_SECRET}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
     depends_on:
       postgres:
         condition: service_healthy
@@ -294,6 +302,31 @@ services:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     depends_on:
       loki:
+        condition: service_healthy
+    networks:
+      - univent-net
+    profiles:
+      - monitoring
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    environment:
+      DATA_SOURCE_NAME: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/univent?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - univent-net
+    profiles:
+      - monitoring
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.61.0
+    environment:
+      REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_s3cr3t}
+    depends_on:
+      redis:
         condition: service_healthy
     networks:
       - univent-net

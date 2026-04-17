@@ -33,7 +33,7 @@ public class AiController {
     }
 
     @PostMapping("/suggest")
-    public ResponseEntity<AiSuggestResponse> suggest(@RequestBody AiSuggestRequest request) {
+    public ResponseEntity<AiSuggestResponse> suggest(@Valid @RequestBody AiSuggestRequest request) {
         return ResponseEntity.ok(aiChatService.suggest(request));
     }
 

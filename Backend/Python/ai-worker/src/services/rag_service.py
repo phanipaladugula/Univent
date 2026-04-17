@@ -1,5 +1,6 @@
 """RAG Pipeline: indexing and querying review chunks in Qdrant."""
 import datetime
+import hashlib
 import logging
 import re
 from typing import List
@@ -63,7 +64,7 @@ class RAGService:
                 vector = self.gemini.generate_embedding(chunk)
                 points.append(
                     PointStruct(
-                        id=f"{review_id}-{index}",
+                        id=self._point_id(review_id, index),
                         vector=vector,
                         payload={
                             "review_id": review_id,
@@ -88,7 +89,7 @@ class RAGService:
         return len(points)
 
     def search(self, query: str, college_id: str = None, program_id: str = None, top_k: int = None) -> List[dict]:
-        top_k = top_k or settings.RAG_TOP_K
+        top_k = max(1, top_k or settings.RAG_TOP_K)
         query_vector = self.gemini.generate_query_embedding(query)
 
         conditions = []
@@ -113,8 +114,8 @@ class RAGService:
         scored = []
 
         for hit in results:
-            payload = hit.payload
-            similarity = hit.score
+            payload = hit.payload or {}
+            similarity = float(hit.score or 0)
             trust_weight = 2.0 if payload.get("is_verified", False) else 1.0
 
             grad_year = payload.get("graduation_year", 0)
@@ -146,7 +147,10 @@ class RAGService:
         if not text or len(text.strip()) < 20:
             return []
 
-        sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+        sentences = [sentence.strip() for sentence in re.split(r"(?<=[.!?])\s+", text.strip()) if sentence.strip()]
+        if not sentences:
+            return [text.strip()]
+
         chunks = []
         current_chunk = []
         current_length = 0
@@ -155,9 +159,9 @@ class RAGService:
             word_count = len(sentence.split())
             if current_length + word_count > settings.CHUNK_SIZE and current_chunk:
                 chunks.append(" ".join(current_chunk))
-                overlap_sentence = current_chunk[-1] if current_chunk else ""
-                current_chunk = [overlap_sentence, sentence] if overlap_sentence else [sentence]
-                current_length = len(overlap_sentence.split()) + word_count
+                overlap_words = " ".join(current_chunk).split()[-settings.CHUNK_OVERLAP :]
+                current_chunk = [" ".join(overlap_words), sentence] if overlap_words else [sentence]
+                current_length = len(" ".join(current_chunk).split())
             else:
                 current_chunk.append(sentence)
                 current_length += word_count
@@ -165,7 +169,7 @@ class RAGService:
         if current_chunk:
             chunks.append(" ".join(current_chunk))
 
-        return chunks or [text.strip()]
+        return [chunk.strip() for chunk in chunks if chunk.strip()] or [text.strip()]
 
     def get_collection_stats(self) -> dict:
         try:
@@ -177,4 +181,10 @@ class RAGService:
                 "status": info.status.value if info.status else "unknown",
             }
         except Exception as exc:
+            logger.error("Failed to fetch collection stats: %s", exc)
             return {"error": str(exc)}
+
+    @staticmethod
+    def _point_id(review_id: str, index: int) -> str:
+        digest = hashlib.sha1(f"{review_id}:{index}".encode("utf-8")).hexdigest()
+        return digest
