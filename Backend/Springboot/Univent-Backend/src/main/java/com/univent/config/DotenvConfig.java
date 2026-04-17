@@ -25,11 +25,9 @@ public class DotenvConfig implements EnvironmentPostProcessor {
             Map<String, Object> envMap = new HashMap<>();
             dotenv.entries().forEach(entry -> {
                 envMap.put(entry.getKey(), entry.getValue());
-                System.out.println("Loaded: " + entry.getKey() + " = " + entry.getValue());
             });
 
             environment.getPropertySources().addFirst(new MapPropertySource("dotenv", envMap));
-            System.out.println("✅ Successfully loaded .env file with " + envMap.size() + " variables");
         } catch (Exception e) {
             System.out.println("⚠️ No .env file found: " + e.getMessage());
         }

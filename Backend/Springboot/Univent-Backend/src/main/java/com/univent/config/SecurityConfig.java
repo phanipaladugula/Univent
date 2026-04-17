@@ -54,7 +54,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/news/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/rankings/**").permitAll()
                         // Auth endpoints
-                        .requestMatchers("/api/v1/auth/**", "/api/v1/test/**", "/api/v1/test/token**").permitAll()                        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()
+                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()
                         .requestMatchers("/api/v1/health/**").permitAll()
                         // Admin endpoints - require ADMIN role
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
@@ -74,20 +75,10 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // Allow specific origins based on environment
-        List<String> allowedOrigins;
-        if (Arrays.asList(environment.getActiveProfiles()).contains("prod")) {
-            allowedOrigins = List.of(
-                    "https://app.univent.com",
-                    "https://www.univent.com"
-            );
-        } else {
-            allowedOrigins = List.of(
-                    "http://localhost:3000",
-                    "http://localhost:8080",
-                    "http://localhost:4200",
-                    "http://127.0.0.1:3000"
-            );
-        }
+        String allowedOriginsEnv = environment.getProperty("ALLOWED_ORIGINS", "http://localhost:3000");
+        List<String> allowedOrigins = Arrays.stream(allowedOriginsEnv.split(","))
+                .map(String::trim)
+                .toList();
 
         configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));

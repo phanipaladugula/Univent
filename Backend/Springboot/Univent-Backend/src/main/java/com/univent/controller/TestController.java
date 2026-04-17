@@ -4,10 +4,12 @@ import com.univent.security.JwtTokenProvider;
 import com.univent.model.entity.User;
 import com.univent.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 
+@Profile("dev")
 @RestController
 @RequestMapping("/api/v1/test")
 @RequiredArgsConstructor // This generates the constructor for the final fields

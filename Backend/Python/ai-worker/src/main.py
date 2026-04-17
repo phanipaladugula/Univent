@@ -84,7 +84,7 @@ Instrumentator().instrument(app).expose(app)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.getenv("ALLOWED_ORIGINS", "http://localhost").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -109,7 +109,7 @@ async def add_request_context(request: Request, call_next):
 
     # Chaos Engineering Hook
     delay_ms = request.headers.get("X-Test-Delay")
-    if delay_ms and delay_ms.isdigit():
+    if delay_ms and delay_ms.isdigit() and os.getenv("ENVIRONMENT", "production") == "development":
         await asyncio.sleep(int(delay_ms) / 1000.0)
 
     response = await call_next(request)

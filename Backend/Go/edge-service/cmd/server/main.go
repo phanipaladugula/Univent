@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -75,8 +76,13 @@ func main() {
 	r.Use(chimw.Recoverer)
 	r.Use(fingerprint.Middleware)
 	r.Use(rateLimiter.Middleware)
+	allowedOriginsStr := os.Getenv("ALLOWED_ORIGINS")
+	if allowedOriginsStr == "" {
+		allowedOriginsStr = "http://localhost"
+	}
+
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   strings.Split(allowedOriginsStr, ","),
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type", "X-Request-ID", "X-Internal-Token"},
 		ExposedHeaders:   []string{"X-Request-ID", "X-RateLimit-Remaining", "X-RateLimit-Reset", "X-Internal-Token"},

@@ -26,7 +26,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_PROFILES_ACTIVE=prod
       - DB_URL=jdbc:postgresql://postgres:5432/univent
       - DB_USERNAME=postgres
       - DB_PASSWORD=${POSTGRES_PASSWORD}
@@ -40,11 +40,11 @@ services:
       - MINIO_ACCESS_KEY=${MINIO_ROOT_USER}
       - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD}
       - MINIO_BUCKET=univent-id-cards
-      - ENCRYPTION_SECRET=${JWT_SECRET}
+      - ENCRYPTION_SECRET=${ENCRYPTION_SECRET}
       - MAIL_HOST=smtp.gmail.com
       - MAIL_PORT=587
-      - MAIL_USERNAME=
-      - MAIL_PASSWORD=
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
       - SERVER_PORT=8080
       - AI_WORKER_URL=http://python-ai:8000
       - INTERNAL_SHARED_SECRET=${INTERNAL_SHARED_SECRET:-d3f4ult_c0mpl3x_s3cr3t_key_for_d3v}
@@ -120,7 +120,7 @@ services:
       POSTGRES_DB: univent
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    command: ["postgres", "-c", "shared_buffers=1GB", "-c", "max_connections=200"]
+    command: ["postgres", "-c", "shared_buffers=128MB", "-c", "max_connections=200"]
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -135,10 +135,13 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-redis_s3cr3t}"]
     volumes:
       - redis_data:/data
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_s3cr3t}
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD} ping | grep PONG"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -149,7 +152,7 @@ services:
   # KAFKA (KRaft mode - no Zookeeper)
   # ============================================
   kafka:
-    image: apache/kafka:latest
+    image: apache/kafka:3.7.0
     ports:
       - "9092:9092"
     environment:
@@ -183,6 +186,11 @@ services:
       - "6333:6333"
     volumes:
       - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:6333/readyz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - univent-net
 
@@ -200,6 +208,11 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - univent-net
 

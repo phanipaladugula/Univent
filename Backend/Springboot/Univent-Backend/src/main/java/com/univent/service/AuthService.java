@@ -38,7 +38,7 @@ public class AuthService {
     private final RateLimitService rateLimitService;
     private final MeterRegistry meterRegistry;
 
-    @Value("${app.email.salt.pepper:UniventSecretPepper2025}")
+    @Value("${app.email.salt.pepper}")
     private String pepper;
 
     private static final String[] ADJECTIVES = {"Swift", "Calm", "Brave", "Witty", "Clever", "Bold", "Mighty", "Silent"};
