@@ -32,7 +32,12 @@ services:
       - DB_PASSWORD=${POSTGRES_PASSWORD}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_s3cr3t}
       - KAFKA_BROKERS=kafka:29092
+      - KAFKA_SECURITY_PROTOCOL=${KAFKA_SECURITY_PROTOCOL:-PLAINTEXT}
+      - KAFKA_SASL_MECHANISM=${KAFKA_SASL_MECHANISM:-SCRAM-SHA-256}
+      - KAFKA_USERNAME=${KAFKA_USERNAME:-}
+      - KAFKA_PASSWORD=${KAFKA_PASSWORD:-}
       - JWT_SECRET=${JWT_SECRET}
       - JWT_ACCESS_EXPIRATION=900000
       - JWT_REFRESH_EXPIRATION=604800000
@@ -47,7 +52,8 @@ services:
       - MAIL_PASSWORD=${MAIL_PASSWORD}
       - SERVER_PORT=8080
       - AI_WORKER_URL=http://python-ai:8000
-      - INTERNAL_SHARED_SECRET=${INTERNAL_SHARED_SECRET:-d3f4ult_c0mpl3x_s3cr3t_key_for_d3v}
+      - INTERNAL_SHARED_SECRET=${INTERNAL_SHARED_SECRET}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -67,13 +73,18 @@ services:
     environment:
       - PORT=9090
       - POSTGRES_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/univent?sslmode=disable
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_s3cr3t}@redis:6379/0
       - KAFKA_BROKERS=kafka:29092
+      - KAFKA_SECURITY_PROTOCOL=${KAFKA_SECURITY_PROTOCOL:-PLAINTEXT}
+      - KAFKA_SASL_MECHANISM=${KAFKA_SASL_MECHANISM:-SCRAM-SHA-256}
+      - KAFKA_USERNAME=${KAFKA_USERNAME:-}
+      - KAFKA_PASSWORD=${KAFKA_PASSWORD:-}
       - JWT_SECRET=${JWT_SECRET}
       - SPRING_BOOT_URL=http://spring-boot:8080
       - PYTHON_AI_URL=http://python-ai:8000
       - ENVIRONMENT=docker
-      - INTERNAL_SHARED_SECRET=${INTERNAL_SHARED_SECRET:-d3f4ult_c0mpl3x_s3cr3t_key_for_d3v}
+      - INTERNAL_SHARED_SECRET=${INTERNAL_SHARED_SECRET}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -95,10 +106,15 @@ services:
       - PORT=8000
       - POSTGRES_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/univent
       - KAFKA_BROKERS=kafka:29092
+      - KAFKA_SECURITY_PROTOCOL=${KAFKA_SECURITY_PROTOCOL:-PLAINTEXT}
+      - KAFKA_SASL_MECHANISM=${KAFKA_SASL_MECHANISM:-SCRAM-SHA-256}
+      - KAFKA_USERNAME=${KAFKA_USERNAME:-}
+      - KAFKA_PASSWORD=${KAFKA_PASSWORD:-}
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - INTERNAL_SHARED_SECRET=${INTERNAL_SHARED_SECRET:-d3f4ult_c0mpl3x_s3cr3t_key_for_d3v}
+      - INTERNAL_SHARED_SECRET=${INTERNAL_SHARED_SECRET}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -222,7 +238,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     ports:
-      - "9091:9090"
+      - "127.0.0.1:9091:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     networks:

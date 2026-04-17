@@ -3,7 +3,6 @@ package config
 import (
 	"log"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
@@ -19,6 +18,11 @@ type Config struct {
 	PythonAIURL          string
 	Environment          string
 	InternalSharedSecret string
+	AllowedOrigins       []string
+	KafkaSecurityProtocol string
+	KafkaSaslMechanism    string
+	KafkaUsername         string
+	KafkaPassword         string
 }
 
 func Load() *Config {
@@ -36,7 +40,12 @@ func Load() *Config {
 		SpringBootURL: getEnv("SPRING_BOOT_URL", "http://spring-boot:8080"),
 		PythonAIURL:          getEnv("PYTHON_AI_URL", "http://python-ai:8000"),
 		Environment:          getEnv("ENVIRONMENT", "development"),
-		InternalSharedSecret: getEnv("INTERNAL_SHARED_SECRET", "d3f4ult_c0mpl3x_s3cr3t_key_for_d3v"),
+		InternalSharedSecret: requireEnv("INTERNAL_SHARED_SECRET"),
+		AllowedOrigins:       strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost"), ","),
+		KafkaSecurityProtocol: getEnv("KAFKA_SECURITY_PROTOCOL", "PLAINTEXT"),
+		KafkaSaslMechanism:    getEnv("KAFKA_SASL_MECHANISM", "SCRAM-SHA-256"),
+		KafkaUsername:         getEnv("KAFKA_USERNAME", ""),
+		KafkaPassword:         getEnv("KAFKA_PASSWORD", ""),
 	}
 
 	log.Printf("✅ Config loaded (env=%s, port=%s, kafka=%v)", cfg.Environment, cfg.Port, cfg.KafkaBrokers)
@@ -55,15 +64,6 @@ func requireEnv(key string) string {
 func getEnv(key, fallback string) string {
 	if val := os.Getenv(key); val != "" {
 		return val
-	}
-	return fallback
-}
-
-func getEnvInt(key string, fallback int) int {
-	if val := os.Getenv(key); val != "" {
-		if i, err := strconv.Atoi(val); err == nil {
-			return i
-		}
 	}
 	return fallback
 }

@@ -1,5 +1,5 @@
 # Build stage
-FROM maven:3.9.6-eclipse-temurin-17-focal AS builder
+FROM maven:3.9.6-eclipse-temurin-17-jammy AS builder
 WORKDIR /app
 COPY pom.xml .
 # Download dependencies
@@ -9,7 +9,7 @@ COPY src ./src
 RUN mvn package -DskipTests -B
 
 # Run stage
-FROM eclipse-temurin:17-jre-focal
+FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 COPY --from=builder /app/target/*.jar app.jar
 EXPOSE 8080

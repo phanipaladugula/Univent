@@ -11,7 +11,7 @@ public class EnvSecretProvider implements SecretProvider {
     @Value("${encryption.secret}")
     private String secretKey;
 
-    @Value("${INTERNAL_SHARED_SECRET:d3f4ult_c0mpl3x_s3cr3t_key_for_d3v}")
+    @Value("${INTERNAL_SHARED_SECRET}")
     private String internalSharedSecret;
 
     @Override

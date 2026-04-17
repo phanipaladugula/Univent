@@ -11,13 +11,13 @@ public class VaultSecretProvider implements SecretProvider {
 
     @Override
     public String getEncryptionSecret() {
-        log.warn("Vault profile active but Vault integration is stubbed. Falling back to default behaviour or throwing exception if strict.");
-        return "fallback-or-vault-secret";
+        log.error("Vault profile is active but Vault integration is not implemented.");
+        throw new IllegalStateException("Vault profile is not supported without a real Vault integration");
     }
 
     @Override
     public String getInternalSharedSecret() {
-        log.warn("Vault profile active but Vault integration is stubbed for internal secret.");
-        return "fallback-or-vault-internal-secret";
+        log.error("Vault profile is active but Vault integration is not implemented.");
+        throw new IllegalStateException("Vault profile is not supported without a real Vault integration");
     }
 }

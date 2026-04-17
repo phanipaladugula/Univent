@@ -34,6 +34,16 @@ class ReviewConsumer:
             "enable.auto.commit": False,
             "max.poll.interval.ms": 300000,  # 5 min for slow AI processing
         }
+        kafka_security_protocol = getattr(settings, "KAFKA_SECURITY_PROTOCOL", "PLAINTEXT")
+        kafka_sasl_mechanism = getattr(settings, "KAFKA_SASL_MECHANISM", "SCRAM-SHA-256")
+        kafka_username = getattr(settings, "KAFKA_USERNAME", "")
+        kafka_password = getattr(settings, "KAFKA_PASSWORD", "")
+        if kafka_security_protocol:
+            self.consumer_config["security.protocol"] = kafka_security_protocol
+        if kafka_username and kafka_password:
+            self.consumer_config["sasl.mechanism"] = kafka_sasl_mechanism
+            self.consumer_config["sasl.username"] = kafka_username
+            self.consumer_config["sasl.password"] = kafka_password
 
         self.producer = None  # Lazy init
 
@@ -57,7 +67,14 @@ class ReviewConsumer:
 
         # Lazy init producer
         from confluent_kafka import Producer
-        self.producer = Producer({"bootstrap.servers": settings.KAFKA_BROKERS})
+        producer_config = {"bootstrap.servers": settings.KAFKA_BROKERS}
+        if "security.protocol" in self.consumer_config:
+            producer_config["security.protocol"] = self.consumer_config["security.protocol"]
+        if "sasl.mechanism" in self.consumer_config:
+            producer_config["sasl.mechanism"] = self.consumer_config["sasl.mechanism"]
+            producer_config["sasl.username"] = self.consumer_config["sasl.username"]
+            producer_config["sasl.password"] = self.consumer_config["sasl.password"]
+        self.producer = Producer(producer_config)
 
         try:
             while self._running:

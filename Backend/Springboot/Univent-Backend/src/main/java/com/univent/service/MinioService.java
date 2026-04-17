@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import jakarta.annotation.PostConstruct;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -23,10 +24,19 @@ public class MinioService {
     @Value("${minio.bucket-name:univent-id-cards}")
     private String bucketName;
 
+    @PostConstruct
+    public void init() {
+        try {
+            ensureBucketExists();
+            log.info("MinIO bucket ready: {}", bucketName);
+        } catch (Exception e) {
+            throw new RuntimeException("MinIO bucket init failed", e);
+        }
+    }
+
     // Method for regular MultipartFile upload
     public String uploadFile(MultipartFile file, UUID userId) {
         try {
-            ensureBucketExists();
             String fileName = userId.toString() + "/" + UUID.randomUUID().toString() + ".enc";
 
             minioClient.putObject(PutObjectArgs.builder()
@@ -48,8 +58,6 @@ public class MinioService {
     // Upload encrypted byte array directly (ONLY ONE COPY OF THIS METHOD)
     public String uploadEncryptedData(byte[] encryptedData, String originalFilename, UUID userId) {
         try {
-            ensureBucketExists();
-
             // Generate unique filename
             String extension = "";
             if (originalFilename != null && originalFilename.contains(".")) {

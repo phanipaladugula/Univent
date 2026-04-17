@@ -54,7 +54,7 @@ func main() {
 	fingerprint := middleware.NewFingerprintMiddleware()
 
 	// ─── Initialize handlers ─────────────────────────
-	wsHandler := handler.NewWebSocketHandler(notifService, jwtAuth)
+	wsHandler := handler.NewWebSocketHandler(notifService, jwtAuth, cfg.AllowedOrigins)
 	notifHandler := handler.NewNotificationHandler(notifService)
 	analyticsHandler := handler.NewAnalyticsHandler(analyticsService)
 	auditHandler := handler.NewAuditHandler(auditService)
@@ -115,7 +115,6 @@ func main() {
 
 	// Analytics (internal or admin)
 	r.Route("/api/v1/analytics", func(r chi.Router) {
-		r.Use(middleware.InternalAuthMiddleware(cfg.InternalSharedSecret))
 		r.Use(jwtAuth.RequireAdmin)
 		r.Get("/dashboard", analyticsHandler.GetDashboard)
 		r.Get("/reviews/daily", analyticsHandler.GetReviewsDaily)
@@ -125,7 +124,6 @@ func main() {
 
 	// Audit logs (internal or admin)
 	r.Route("/api/v1/admin/audit", func(r chi.Router) {
-		r.Use(middleware.InternalAuthMiddleware(cfg.InternalSharedSecret))
 		r.Use(jwtAuth.RequireAdmin)
 		r.Get("/logs", auditHandler.GetAuditLogs)
 	})

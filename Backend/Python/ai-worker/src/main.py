@@ -1,5 +1,7 @@
 """FastAPI application entry point for the AI Worker service."""
+import asyncio
 import logging
+import os
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -90,10 +92,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-import os
-import asyncio
-
 @app.middleware("http")
 async def add_request_context(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
@@ -102,7 +100,10 @@ async def add_request_context(request: Request, call_next):
     # Inter-Service Security
     if request.url.path not in ["/health", "/metrics", "/docs", "/openapi.json"]:
         token = request.headers.get("X-Internal-Token")
-        expected_secret = os.getenv("INTERNAL_SHARED_SECRET", "d3f4ult_c0mpl3x_s3cr3t_key_for_d3v")
+        expected_secret = os.getenv("INTERNAL_SHARED_SECRET")
+        if not expected_secret:
+            logger.error("INTERNAL_SHARED_SECRET is not configured")
+            return Response(content="Service misconfigured", status_code=500)
         if token != expected_secret:
             logger.warning(f"Unauthorized access attempt to {request.url.path} with token: {token}")
             return Response(content="Forbidden", status_code=403)

@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -23,14 +24,32 @@ type WebSocketHandler struct {
 	upgrader     websocket.Upgrader
 }
 
-func NewWebSocketHandler(ns *service.NotificationService, jwt *middleware.JWTAuth) *WebSocketHandler {
+func NewWebSocketHandler(ns *service.NotificationService, jwt *middleware.JWTAuth, allowedOrigins []string) *WebSocketHandler {
+	trimmedOrigins := make([]string, 0, len(allowedOrigins))
+	for _, origin := range allowedOrigins {
+		if o := strings.TrimSpace(origin); o != "" {
+			trimmedOrigins = append(trimmedOrigins, o)
+		}
+	}
+
 	return &WebSocketHandler{
 		notifService: ns,
 		jwtAuth:      jwt,
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
-			CheckOrigin:     func(r *http.Request) bool { return true },
+			CheckOrigin: func(r *http.Request) bool {
+				origin := strings.TrimSpace(r.Header.Get("Origin"))
+				if origin == "" {
+					return false
+				}
+				for _, allowed := range trimmedOrigins {
+					if origin == allowed {
+						return true
+					}
+				}
+				return false
+			},
 		},
 	}
 }

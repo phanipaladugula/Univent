@@ -26,6 +26,10 @@ class Settings(BaseSettings):
 
     # Kafka (REQUIRED)
     KAFKA_BROKERS: str
+    KAFKA_SECURITY_PROTOCOL: str = "PLAINTEXT"
+    KAFKA_SASL_MECHANISM: str = "SCRAM-SHA-256"
+    KAFKA_USERNAME: Optional[str] = None
+    KAFKA_PASSWORD: Optional[str] = None
 
     KAFKA_GROUP_ID: str = "ai-worker-group"
 
