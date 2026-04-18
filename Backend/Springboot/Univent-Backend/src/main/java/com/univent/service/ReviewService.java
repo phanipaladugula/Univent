@@ -245,13 +245,33 @@ public class ReviewService {
                 .map(this::mapToResponse);
     }
 
-    // Add this method to ReviewService.java for async refresh
-
-
-    // Add this to the class
     private final AsyncMaterializedViewRefreshService asyncRefreshService;
 
-    // Replace the approveReview method's refresh calls with async version
+    /**
+     * Called when the AI worker finishes processing a {@link ReviewStatus#PENDING} review.
+     * Safe content is auto-published; unsafe content is flagged for admin review.
+     */
+    @Transactional
+    public void applyPostAiModeration(Review review, boolean moderationSafe, String moderationReason) {
+        if (review.getStatus() != ReviewStatus.PENDING) {
+            return;
+        }
+        if (!moderationSafe) {
+            review.setStatus(ReviewStatus.FLAGGED);
+            log.warn("Review {} flagged by AI moderation: {}", review.getId(), moderationReason);
+            return;
+        }
+        review.setStatus(ReviewStatus.PUBLISHED);
+        review.setPublishedAt(LocalDateTime.now());
+        asyncRefreshService.refreshMaterializedViewsAsync();
+        User user = review.getUser();
+        user.setReputation(user.getReputation() + 10);
+        userRepository.save(user);
+        updateCollegeStats(review.getCollege().getId());
+        meterRegistry.counter("univent.reviews.auto_published").increment();
+        log.info("Review {} auto-published after AI moderation", review.getId());
+    }
+
     @Transactional
     public ReviewResponse approveReview(UUID reviewId, User admin) {
         Review review = reviewRepository.findById(reviewId)

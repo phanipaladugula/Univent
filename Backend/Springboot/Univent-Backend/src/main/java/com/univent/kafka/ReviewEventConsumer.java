@@ -3,8 +3,8 @@ package com.univent.kafka;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.univent.model.entity.Review;
-import com.univent.model.enums.ReviewStatus;
 import com.univent.repository.ReviewRepository;
+import com.univent.service.ReviewService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -23,13 +23,14 @@ import java.util.*;
 public class ReviewEventConsumer {
 
     private final ReviewRepository reviewRepository;
+    private final ReviewService reviewService;
     private final NotificationEventProducer notificationProducer;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Consumes review.processed events from the Python AI worker.
      * Updates the review entity with AI-generated data (sentiment, topics, moderation).
-     * If moderation flags the content, the review status changes to FLAGGED.
+     * If moderation passes, pending reviews are auto-published; otherwise they are flagged.
      */
     @RetryableTopic(
             attempts = "3",
@@ -77,10 +78,7 @@ public class ReviewEventConsumer {
             review.setExtractedTopics(topics.toArray(new String[0]));
             review.setIsAiProcessed(true);
 
-            if (!moderationSafe) {
-                review.setStatus(ReviewStatus.FLAGGED);
-                log.warn("🚫 Review {} flagged by AI moderation: {}", reviewId, moderationReason);
-            }
+            reviewService.applyPostAiModeration(review, moderationSafe, moderationReason);
 
             reviewRepository.save(review);
 

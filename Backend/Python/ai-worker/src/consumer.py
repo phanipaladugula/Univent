@@ -3,8 +3,6 @@ import json
 import logging
 import threading
 import time
-from typing import Callable
-
 from confluent_kafka import Consumer, KafkaError, KafkaException
 
 from src.config import settings
@@ -46,6 +44,14 @@ class ReviewConsumer:
             self.consumer_config["sasl.password"] = kafka_password
 
         self.producer = None  # Lazy init
+
+    @property
+    def running(self) -> bool:
+        """True while the consumer thread is expected to be active (used by /ready)."""
+        if not self._running:
+            return False
+        thread = self._thread
+        return thread is not None and thread.is_alive()
 
     def start(self):
         """Start consuming in a background thread."""
