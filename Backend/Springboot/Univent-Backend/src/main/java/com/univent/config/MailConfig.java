@@ -15,8 +15,8 @@ public class MailConfig {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
         mailSender.setHost("smtp.gmail.com");
         mailSender.setPort(587);
-        mailSender.setUsername("myworkspaceforme@gmail.com");
-        mailSender.setPassword("wnlz guhz mypq swil"); // Your Gmail app password
+        mailSender.setUsername("admin.univent@gmail.com");
+        mailSender.setPassword("ycnktsfqkcmjisjt"); // Your Gmail app password
 
         Properties props = mailSender.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");
@@ -24,7 +24,7 @@ public class MailConfig {
         props.put("mail.smtp.starttls.enable", "true");
         props.put("mail.smtp.starttls.required", "true");
         props.put("mail.debug", "true");
-        props.put("mail.from", "myworkspaceforme@gmail.com"); // Critical property
+        props.put("mail.from", "admin.univent@gmail.com"); // Critical property
 
         return mailSender;
     }
